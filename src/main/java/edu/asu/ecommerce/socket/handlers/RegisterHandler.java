@@ -1,0 +1,47 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package edu.asu.ecommerce.socket.handlers;
+
+import com.google.gson.JsonObject;
+import edu.asu.ecommerce.services.UserService;
+
+import java.sql.SQLException;
+
+/**
+ *
+ * @author Dell
+ */
+public class RegisterHandler {
+    private UserService userService;    
+
+    public RegisterHandler(UserService us){
+        this.userService = us;
+    }
+    
+    public JsonObject handle(JsonObject request){
+        
+        JsonObject response = new JsonObject();
+
+        String username = request.get("username").getAsString();
+        String password = request.get("password").getAsString();
+        String email = request.get("email").getAsString();
+        String region = request.get("region").getAsString();
+        
+        try{
+            userService.createUser(username,email,password,region);
+            response.addProperty("status","OK");
+            response.addProperty("message", "Account Created");
+        }
+        catch(SQLException se){
+            response.addProperty("status", "ERR");
+            response.addProperty("code", "777");
+            response.addProperty("message", "SQL ERROR");
+        }
+        
+        
+        
+        return response;
+    }
+}
