@@ -16,8 +16,13 @@ public class UserService {
     }
 
 
-    public void createUser(String userName, String email, String password, String region) throws SQLException {
-        profileDao.insertProfile(new Profile(userName,region,email,password));
+    public void createUser(String userName, String email, String password, String region) throws Exception {
+        if(isExist(email)){
+            throw new Exception("email is already registered");
+        }
+        else {
+            profileDao.insertProfile(new Profile(userName, region, email, password));
+        }
     }
 
 
@@ -38,6 +43,9 @@ public class UserService {
             return profileDao.getProfileById(id);
         }
         return null;
+    }
+    public boolean isExist(String email) throws SQLException {
+        return getUserByEmail(email) != null;
     }
 
 
