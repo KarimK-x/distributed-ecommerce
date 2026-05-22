@@ -9,10 +9,7 @@ import edu.asu.ecommerce.services.UserService;
 
 import java.sql.SQLException;
 
-/**
- *
- * @author Dell
- */
+
 public class RegisterHandler {
     private UserService userService;    
 
@@ -39,8 +36,12 @@ public class RegisterHandler {
             response.addProperty("code", "777");
             response.addProperty("message", "SQL ERROR");
         }
-        
-        
+        catch (Exception e){
+            response.addProperty("status","ERR");
+            response.addProperty("code", "505");
+            response.addProperty("message", e.getMessage());
+        }
+
         
         return response;
     }

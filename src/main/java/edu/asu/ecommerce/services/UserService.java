@@ -6,13 +6,19 @@ import edu.asu.ecommerce.dataaccess.Profile_DAO;
 import java.sql.*;
 
 public class UserService {
-    private Connection con;
+    private Connection conSecure;
+    private Connection conGlobal;
+    private Connection conNorth;
+    private Connection conSouth;
     private Profile_DAO profileDao;
 
 
-    public UserService(Connection conn) throws SQLException {
-        con = conn;
-        profileDao = new Profile_DAO(con);
+    public UserService(Connection con_secure, Connection con_global, Connection con_north, Connection con_south) throws SQLException {
+        this.conSecure = con_secure;
+        this.conGlobal = con_global;
+        this.conNorth = con_north;
+        this.conSouth = con_south;
+        profileDao = new Profile_DAO(conSecure);
     }
 
 
@@ -33,8 +39,8 @@ public class UserService {
 
     public Profile getUserByEmail(String email) throws SQLException {
 
-        String sql = "select id from UserInfo where email = ?";
-        PreparedStatement pst = con.prepareStatement(sql);
+        String sql = "select userID from UserInfo where email = ?";
+        PreparedStatement pst = conSecure.prepareStatement(sql);
         pst.setString(1,email);
 
         ResultSet rs = pst.executeQuery();

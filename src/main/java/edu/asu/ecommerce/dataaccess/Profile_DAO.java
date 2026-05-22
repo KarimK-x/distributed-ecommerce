@@ -14,8 +14,8 @@ public class Profile_DAO {
 
 
     public Profile getProfileById(String id) throws SQLException {
-        String sql = "select * from Profile where id = ?";
-        String sql2 = "select * from UserInfo where id = ?";
+        String sql = "select * from Profile where userID = ?";
+        String sql2 = "select * from UserInfo where userID = ?";
         PreparedStatement pst = con.prepareStatement(sql);
         PreparedStatement pst2 = con.prepareStatement(sql2);
         pst.setString(1,id);

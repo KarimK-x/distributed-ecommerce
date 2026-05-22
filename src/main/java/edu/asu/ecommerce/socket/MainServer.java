@@ -54,17 +54,17 @@
                 String baseURL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
                 
                 //Connection to Centralized Database
-//                Connection con = DriverManager.getConnection(url, "sa", "123456");
+                //Connection con = DriverManager.getConnection(url, "sa", "123456");
                 Connection con = DriverManager.getConnection(baseURL + "databaseName=CentralizedMarketplace;", "sa", "123456");
                 
                 //Connections to Distributed Database
-                // Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=node_secure;");
-                // Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=node_global;");
-                // Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=node_north;");
-                // Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=node_south;");
+                Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=node_secure;", "sa", "123456");
+                Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=node_global;", "sa", "123456");
+                Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=node_north;", "sa", "123456");
+                Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=node_south;", "sa", "123456");
                 
                 //----SERVICES----
-                UserService userService = new UserService(con); //Sayebha using centralized db for now
+                UserService userService = new UserService(conSecure, conGlobal, conNorth, conSouth); //Sayebha using centralized db for now
                 //Add other services here, using the connection they need.
 
                 
@@ -104,10 +104,10 @@
                 }
                 dis.close();
                 dos.close();
-                // conSecure.close();
-                // conGlobal.close();
-                // conNorth.close();
-                // conSouth.close();
+                conSecure.close();
+                conGlobal.close();
+                conNorth.close();
+                conSouth.close();
                 con.close();
                 this.client.close();
 

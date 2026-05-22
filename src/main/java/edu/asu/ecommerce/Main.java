@@ -22,7 +22,6 @@ public class Main {
         // START BOTH THREADS AT THE EXACT SAME TIME
         
         user1.start();
-        Thread.sleep(5000);
         user2.start();
     }
     
