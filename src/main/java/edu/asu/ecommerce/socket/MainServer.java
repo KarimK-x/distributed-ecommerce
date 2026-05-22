@@ -21,6 +21,7 @@
 
         public MainServer(ServerSocket s) {
             this.server = s;
+            System.out.println("Main Server Initialized...");
         }
         public static void main(String[] args) throws IOException, SQLException {
 
@@ -36,7 +37,6 @@
 
     class ClientThread extends Thread{
         private Socket client;
-        private ServerSocket server;
 
         public ClientThread(Socket client){
             this.client = client;
@@ -58,10 +58,10 @@
                 Connection con = DriverManager.getConnection(baseURL + "databaseName=CentralizedMarketplace;", "sa", "123456");
                 
                 //Connections to Distributed Database
-                Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=node_secure;");
-                Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=node_global;");
-                Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=node_north;");
-                Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=node_south;");
+                // Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=node_secure;");
+                // Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=node_global;");
+                // Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=node_north;");
+                // Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=node_south;");
                 
                 //----SERVICES----
                 UserService userService = new UserService(con); //Sayebha using centralized db for now
@@ -104,6 +104,10 @@
                 }
                 dis.close();
                 dos.close();
+                // conSecure.close();
+                // conGlobal.close();
+                // conNorth.close();
+                // conSouth.close();
                 con.close();
                 this.client.close();
 
