@@ -25,8 +25,8 @@ public class Profile_DAO {
 
         if(rs.next() && rs2.next()){
             return new Profile(
-                  rs.getString("userID"), rs.getString("userName"), rs.getString("region"),
-                  rs.getTimestamp("createdAt").toLocalDateTime(),
+                rs.getString("userID"), rs.getString("userName"), rs.getString("region"),
+                rs.getTimestamp("createdAt").toLocalDateTime(),
                 rs2.getString("email"),rs2.getString("passwordHash"),rs2.getDouble("balance")
             );
         }
