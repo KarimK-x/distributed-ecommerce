@@ -55,16 +55,16 @@
                 
                 //Connection to Centralized Database
                 //Connection con = DriverManager.getConnection(url, "sa", "123456");
-                Connection con = DriverManager.getConnection(baseURL + "databaseName=CentralizedMarketplace;", "sa", "123456");
+                //Connection con = DriverManager.getConnection(baseURL + "databaseName=CentralizedMarketplace;", "sa", "123456");
                 
                 //Connections to Distributed Database
-                Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=node_secure;", "sa", "123456");
-                Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=node_global;", "sa", "123456");
-                Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=node_north;", "sa", "123456");
-                Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=node_south;", "sa", "123456");
+                Connection conSecure = DriverManager.getConnection(baseURL + "databaseName=Secure;", "sa", "123456");
+                Connection conGlobal = DriverManager.getConnection(baseURL + "databaseName=Global;", "sa", "123456");
+                Connection conNorth  = DriverManager.getConnection(baseURL + "databaseName=North;", "sa", "123456");
+                Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=South;", "sa", "123456");
                 
                 //----SERVICES----
-                UserService userService = new UserService(conSecure, conGlobal, conNorth, conSouth); //Sayebha using centralized db for now
+                UserService userService = new UserService(conSecure, conNorth, conSouth); //Sayebha using centralized db for now
                 //Add other services here, using the connection they need.
 
                 
@@ -108,7 +108,7 @@
                 conGlobal.close();
                 conNorth.close();
                 conSouth.close();
-                con.close();
+                //con.close();
                 this.client.close();
 
 
