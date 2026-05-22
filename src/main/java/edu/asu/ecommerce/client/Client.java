@@ -8,12 +8,6 @@ import com.google.gson.JsonObject;
 import java.net.*;
 import java.io.*;
 
-/**
- *
- * @author Dell
- */
-// When main app is written, every new request should 
-// create a Socket Client using this class
 
 public class Client {
     
