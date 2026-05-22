@@ -84,4 +84,36 @@ public class UserService {
         
         return getUserByEmail(email) != null;
     }
+
+    public boolean authenticate(String email, String password) throws SQLException {
+        if (email == null || email.isEmpty() || password == null) {
+            return false;
+        }
+
+        User_Info info = userInfoDao.getUserByEmail(email);
+        if (info == null) {
+            return false;
+        }
+
+        return password.equals(info.getPassword());
+    }
+
+    public void depositCash(String email, double amount) throws Exception {
+        if (email == null || email.isEmpty()) {
+            throw new Exception("email is required");
+        }
+        if (amount <= 0) {
+            throw new Exception("amount must be greater than zero");
+        }
+
+        User_Info info = userInfoDao.getUserByEmail(email);
+        if (info == null) {
+            throw new Exception("user not found");
+        }
+
+        boolean updated = userInfoDao.incrementBalance(info.getId(), amount);
+        if (!updated) {
+            throw new SQLException("balance update failed");
+        }
+    }
 }

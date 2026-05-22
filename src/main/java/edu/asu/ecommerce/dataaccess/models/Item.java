@@ -20,6 +20,10 @@ public class Item {
         this.brandId = brandId;
     }
 
+    public String getId() {
+        return id;
+    }
+
     public void setQuantity(int quantity) {
         this.quantity = quantity;
     }

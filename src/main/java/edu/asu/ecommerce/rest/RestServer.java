@@ -4,10 +4,144 @@
  */
 package edu.asu.ecommerce.rest;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import edu.asu.ecommerce.dataaccess.models.User;
+import edu.asu.ecommerce.services.UserService;
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
 /**
  *
  * @author Dell
  */
 public class RestServer {
-    
+	private static final String BASE_URL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
+	private static final String DB_USER = "sa";
+	private static final String DB_PASS = "123456";
+
+	public static void main(String[] args) {
+		Javalin app = Javalin.create(config -> config.http.defaultContentType = "application/json").start(7000);
+
+		app.post("/items", ctx -> {
+			JsonObject request = parseJson(ctx);
+			if (request == null) {
+				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+				return;
+			}
+
+			notImplemented(ctx, "Add item not implemented");
+		});
+
+		app.put("/items/{id}", ctx -> {
+			JsonObject request = parseJson(ctx);
+			if (request == null) {
+				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+				return;
+			}
+
+			notImplemented(ctx, "Update item not implemented");
+		});
+
+		app.delete("/items/{id}", ctx -> {
+			notImplemented(ctx, "Delete item not implemented");
+		});
+
+		app.get("/items/search", ctx -> {
+			notImplemented(ctx, "Search items not implemented");
+		});
+
+		app.post("/deposit", ctx -> {
+			JsonObject request = parseJson(ctx);
+			if (request == null) {
+				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+				return;
+			}
+
+			String email = getString(request, "email");
+			Double amount = getDouble(request, "amount");
+
+			if (email == null || email.isBlank() || amount == null) {
+				ctx.status(400).result(errorResponse("400", "email and amount are required").toString());
+				return;
+			}
+			if (amount <= 0) {
+				ctx.status(400).result(errorResponse("400", "amount must be greater than zero").toString());
+				return;
+			}
+
+			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+				UserService userService = new UserService(conSecure, conNorth, conSouth);
+				userService.depositCash(email, amount);
+				User user = userService.getUserByEmail(email);
+
+				if (user == null) {
+					ctx.status(404).result(errorResponse("404", "User not found").toString());
+					return;
+				}
+
+				JsonObject response = new JsonObject();
+				response.addProperty("status", "OK");
+				response.addProperty("message", "Deposit successful");
+				response.addProperty("balance", user.getBalance());
+				ctx.result(response.toString());
+			} catch (SQLException se) {
+				ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+			} catch (Exception e) {
+				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+			}
+		});
+	}
+
+	private static JsonObject parseJson(Context ctx) {
+		String body = ctx.body();
+		if (body == null || body.isBlank()) {
+			return new JsonObject();
+		}
+		try {
+			return JsonParser.parseString(body).getAsJsonObject();
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+
+	private static JsonObject errorResponse(String code, String message) {
+		JsonObject response = new JsonObject();
+		response.addProperty("status", "ERR");
+		response.addProperty("code", code);
+		response.addProperty("message", message);
+		return response;
+	}
+
+	private static String getString(JsonObject obj, String key) {
+		if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) {
+			return null;
+		}
+		return obj.get(key).getAsString();
+	}
+
+	private static Double getDouble(JsonObject obj, String key) {
+		if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) {
+			return null;
+		}
+		return obj.get(key).getAsDouble();
+	}
+	private static Integer getInteger(JsonObject obj, String key) {
+		if (obj == null || !obj.has(key) || obj.get(key).isJsonNull()) {
+			return null;
+		}
+		return obj.get(key).getAsInt();
+	}
+
+	private static void notImplemented(Context ctx, String message) {
+		ctx.status(501).result(errorResponse("501", message).toString());
+	}
 }

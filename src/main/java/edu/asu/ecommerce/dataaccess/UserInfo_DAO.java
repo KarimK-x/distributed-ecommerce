@@ -63,6 +63,15 @@ public class UserInfo_DAO {
         }
         return null;
     }
+
+    public boolean incrementBalance(String userId, double amount) throws SQLException {
+        String sql = "UPDATE UserInfo SET balance = balance + ? WHERE userID = ?";
+        try (PreparedStatement pst = conSecure.prepareStatement(sql)) {
+            pst.setDouble(1, amount);
+            pst.setString(2, userId);
+            return pst.executeUpdate() > 0;
+        }
+    }
 }
 
 

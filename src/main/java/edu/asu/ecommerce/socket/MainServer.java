@@ -82,7 +82,7 @@
                             response = regHandler.handle(request);
                             break;
                         case "LOGIN":
-                            LoginHandler logHandler = new LoginHandler(request);
+                            LoginHandler logHandler = new LoginHandler(userService, request);
                             response = logHandler.handle();
                             break;
                         case "EXIT":

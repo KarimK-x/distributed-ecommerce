@@ -5,6 +5,10 @@ import com.google.gson.JsonObject;
 import edu.asu.ecommerce.client.Client;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -19,10 +23,18 @@ public class Main {
         // --- USER 2 THREAD ---
         Thread user2 = new Thread(() -> runRegistration(c2, "bebo", "1234", "bebo@gmail.com","South"));
 
-        // START BOTH THREADS AT THE EXACT SAME TIME
         
         user1.start();
         user2.start();
+
+        user1.join();
+        user2.join();
+
+        runLogin(c1, "karim@gmail.com", "3333", "karim");
+
+        sendExit(c1, "karim");
+        sendExit(c2, "bebo");
+        runRestDepositTest();
     }
     
     public static void runRegistration(Client c, String username, String password, String email, String region){
@@ -39,14 +51,51 @@ public class Main {
                 c.sendRequest(reqC1);
                 System.out.println("[User " + username +"]: Server replied: " + c.receiveResponse());
                 
-                // Clean exit
-                JsonObject exitReq = new JsonObject();
-                exitReq.addProperty("action", "EXIT");
-                c.sendRequest(exitReq);
-                
             } catch (IOException e) {
                 System.out.println("User 1 Error: " + e);
             }
+    }
+
+    public static void runLogin(Client c, String email, String password, String username){
+        try {
+            JsonObject loginReq = new JsonObject();
+            loginReq.addProperty("action", "LOGIN");
+            loginReq.addProperty("email", email);
+            loginReq.addProperty("password", password);
+
+            System.out.println("[User " + username + "]: Sending login request...");
+            c.sendRequest(loginReq);
+            System.out.println("[User " + username + "]: Server replied: " + c.receiveResponse());
+
+        } catch (IOException e) {
+            System.out.println("Login Error: " + e);
+        }
+    }
+
+    public static void sendExit(Client c, String username){
+        try {
+            JsonObject exitReq = new JsonObject();
+            exitReq.addProperty("action", "EXIT");
+            c.sendRequest(exitReq);
+            System.out.println("[User " + username + "]: Connection closing.");
+        } catch (IOException e) {
+            System.out.println("Exit Error: " + e);
+        }
+    }
+
+    public static void runRestDepositTest() throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        String json = "{\"email\":\"bebo@gmail.com\",\"amount\":50}";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/deposit"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST status: " + response.statusCode());
+        System.out.println("REST body: " + response.body());
     }
     
 }
