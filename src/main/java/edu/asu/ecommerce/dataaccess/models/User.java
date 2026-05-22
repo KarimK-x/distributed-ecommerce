@@ -21,13 +21,16 @@ public class User {
         return id;
     }
 
-    public User(String name, String reg, String email, String password){
+    public User(String name, String reg, String email, String password) throws Exception{
 
         if("north".equalsIgnoreCase(reg)){
             this.id ="N-" +  UUID.randomUUID().toString();
         }
-        else{
+        else if("south".equalsIgnoreCase(reg)){
             this.id ="S-" + UUID.randomUUID().toString();
+        }
+        else{
+            throw new Exception("Invalid Region");
         }
         this.userName = name;
         this.createdAt = LocalDateTime.now();

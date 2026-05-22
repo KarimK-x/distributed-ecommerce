@@ -13,11 +13,11 @@ public class Main {
         Client c2 = new Client(new Socket("localhost", 1234));
 
         // --- USER 1 THREAD ---
-        Thread user1 = new Thread(() -> runRegistration(c1, "karim", "3333", "karim@gmail.com","Cairo"));
+        Thread user1 = new Thread(() -> runRegistration(c1, "karim", "3333", "karim@gmail.com","North"));
 
 
         // --- USER 2 THREAD ---
-        Thread user2 = new Thread(() -> runRegistration(c2, "bebo", "1234", "bebo@gmail.com","Alex"));
+        Thread user2 = new Thread(() -> runRegistration(c2, "bebo", "1234", "bebo@gmail.com","South"));
 
         // START BOTH THREADS AT THE EXACT SAME TIME
         
