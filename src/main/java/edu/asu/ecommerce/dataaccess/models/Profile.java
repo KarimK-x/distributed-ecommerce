@@ -22,10 +22,10 @@ public class Profile {
     }
 
     public Profile(String name, String reg, String email, String password){
-        id = UUID.randomUUID().toString();
-        userName = name;
-        createdAt = LocalDateTime.now();
-        region = reg;
+        this.id = UUID.randomUUID().toString();
+        this.userName = name;
+        this.createdAt = LocalDateTime.now();
+        this.region = reg;
 
         this.email = email;
         this.password = password;
@@ -36,11 +36,11 @@ public class Profile {
         return userName;
     }
 
-    public Profile(String id, String name, String reg, String email, String password, double balance){
+    public Profile(String id, String name, String reg, LocalDateTime createdAt, String email, String password, double balance){
         this.id = id;
-        userName = name;
-        createdAt = LocalDateTime.now();
-        region = reg;
+        this.userName = name;
+        this.createdAt = createdAt;
+        this.region = reg;
 
         this.email = email;
         this.password = password;
