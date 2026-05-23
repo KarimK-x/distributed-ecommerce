@@ -32,6 +32,8 @@ public class LoginHandler {
             if (isValid) {
                 response.addProperty("status", "OK");
                 response.addProperty("message", "Login successful");
+                String userId = authService.getUserByEmail(email).getId();
+                response.addProperty("userId", userId);
             } else {
                 response.addProperty("status", "ERR");
                 response.addProperty("code", "401");

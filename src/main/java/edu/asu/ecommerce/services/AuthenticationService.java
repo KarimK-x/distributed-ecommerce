@@ -82,7 +82,7 @@ public class AuthenticationService {
 
     public boolean isExist(String email) throws SQLException {
         
-        return getUserByEmail(email) != null;
+        return userInfoDao.getUserByEmail(email) != null; //leh mkontsh 3amelha kda?
     }
 
     public boolean authenticate(String email, String password) throws SQLException {
@@ -98,22 +98,4 @@ public class AuthenticationService {
         return password.equals(info.getPassword());
     }
 
-    public void depositCash(String email, double amount) throws Exception {
-        if (email == null || email.isEmpty()) {
-            throw new Exception("email is required");
-        }
-        if (amount <= 0) {
-            throw new Exception("amount must be greater than zero");
-        }
-
-        User_Info info = userInfoDao.getUserByEmail(email);
-        if (info == null) {
-            throw new Exception("user not found");
-        }
-
-        boolean updated = userInfoDao.incrementBalance(info.getId(), amount);
-        if (!updated) {
-            throw new SQLException("balance update failed");
-        }
-    }
 }

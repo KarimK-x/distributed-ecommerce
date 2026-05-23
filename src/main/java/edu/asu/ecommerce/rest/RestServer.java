@@ -7,6 +7,7 @@ package edu.asu.ecommerce.rest;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import edu.asu.ecommerce.dataaccess.models.User;
+import edu.asu.ecommerce.services.ItemService;
 import edu.asu.ecommerce.services.UserService;
 import edu.asu.ecommerce.services.AuthenticationService;
 import io.javalin.Javalin;
@@ -29,22 +30,10 @@ public class RestServer {
 		Javalin app = Javalin.create(config -> config.http.defaultContentType = "application/json").start(7000);
 
 		app.post("/items", ctx -> {
-			JsonObject request = parseJson(ctx);
-			if (request == null) {
-				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
-				return;
-			}
-
-			notImplemented(ctx, "Add item not implemented");
+            implementAddItem(ctx);
 		});
 
 		app.put("/items/{id}", ctx -> {
-			JsonObject request = parseJson(ctx);
-			if (request == null) {
-				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
-				return;
-			}
-
 			notImplemented(ctx, "Update item not implemented");
 		});
 
@@ -57,50 +46,8 @@ public class RestServer {
 		});
 
 		app.post("/deposit", ctx -> {
-			JsonObject request = parseJson(ctx);
-			if (request == null) {
-				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
-				return;
-			}
-
-			String email = getString(request, "email");
-			Double amount = getDouble(request, "amount");
-
-			if (email == null || email.isBlank() || amount == null) {
-				ctx.status(400).result(errorResponse("400", "email and amount are required").toString());
-				return;
-			}
-			if (amount <= 0) {
-				ctx.status(400).result(errorResponse("400", "amount must be greater than zero").toString());
-				return;
-			}
-
-			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
-
-				UserService userService = new UserService(conSecure, conNorth, conSouth);
-				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
-
-                userService.depositCash(email, amount);
-				User user = authService.getUserByEmail(email);
-
-				if (user == null) {
-					ctx.status(404).result(errorResponse("404", "User not found").toString());
-					return;
-				}
-
-				JsonObject response = new JsonObject();
-				response.addProperty("status", "OK");
-				response.addProperty("message", "Deposit successful");
-				response.addProperty("balance", user.getBalance());
-				ctx.result(response.toString());
-			} catch (SQLException se) {
-				ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
-			} catch (Exception e) {
-				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
-			}
-		});
+            implementDeposit(ctx);
+        });
 	}
 
 	private static JsonObject parseJson(Context ctx) {
@@ -147,4 +94,107 @@ public class RestServer {
 	private static void notImplemented(Context ctx, String message) {
 		ctx.status(501).result(errorResponse("501", message).toString());
 	}
+
+    private static void implementAddItem(Context ctx){
+        {
+			JsonObject request = parseJson(ctx);
+			if (request == null) {
+				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+				return;
+			}
+			String itemName = getString(request, "itemName");
+			String description = getString(request, "description");
+			Double unitPrice = getDouble(request, "unitPrice");
+			Integer quantity = getInteger(request, "quantity");
+			Integer categoryId = getInteger(request, "categoryId");
+			Integer brandId = getInteger(request, "brandId");
+			String email = getString(request, "email");
+
+			if (itemName == null || description == null || unitPrice == null || quantity == null
+					|| categoryId == null || brandId == null || email == null || email.isBlank()) {
+				ctx.status(400).result(errorResponse("400", "Missing required fields").toString());
+				return;
+			}
+
+			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+					 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+				User user = authService.getUserByEmail(email);
+				if (user == null) {
+					ctx.status(404).result(errorResponse("404", "User not found").toString());
+					return;
+				}
+
+				ItemService productServices = new ItemService(conGlobal);
+				String itemId = productServices.addItem(itemName, description, unitPrice, quantity,
+						categoryId, brandId);
+
+				UserService userService = new UserService(conSecure, conNorth, conSouth);
+				try {
+					userService.createInventoryEntry(user.getId(), itemId, "Available");
+				} catch (Exception e) {
+					productServices.deleteItem(itemId);
+					throw e;
+				}
+
+				JsonObject response = new JsonObject();
+				response.addProperty("status", "OK");
+				response.addProperty("message", "Item created");
+				response.addProperty("itemId", itemId);
+				ctx.result(response.toString());
+			} catch (SQLException se) {
+				ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+			} catch (Exception e) {
+				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+			}
+        }
+    }
+    private static void implementDeposit(Context ctx){
+        JsonObject request = parseJson(ctx);
+			if (request == null) {
+				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+				return;
+			}
+
+			String email = getString(request, "email");
+			Double amount = getDouble(request, "amount");
+
+			if (email == null || email.isBlank() || amount == null) {
+				ctx.status(400).result(errorResponse("400", "email and amount are required").toString());
+				return;
+			}
+			if (amount <= 0) {
+				ctx.status(400).result(errorResponse("400", "amount must be greater than zero").toString());
+				return;
+			}
+
+			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+				UserService userService = new UserService(conSecure, conNorth, conSouth);
+				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+
+                userService.depositCash(email, amount);
+				User user = authService.getUserByEmail(email);
+
+				if (user == null) {
+					ctx.status(404).result(errorResponse("404", "User not found").toString());
+					return;
+				}
+
+				JsonObject response = new JsonObject();
+				response.addProperty("status", "OK");
+				response.addProperty("message", "Deposit successful");
+				response.addProperty("balance", user.getBalance());
+				ctx.result(response.toString());
+			} catch (SQLException se) {
+				ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+			} catch (Exception e) {
+				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+			}
+    }
 }

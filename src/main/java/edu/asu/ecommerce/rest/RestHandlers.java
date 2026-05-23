@@ -8,6 +8,6 @@ package edu.asu.ecommerce.rest;
  *
  * @author Dell
  */
-public class RestClient {
+public class RestHandlers {
     
 }

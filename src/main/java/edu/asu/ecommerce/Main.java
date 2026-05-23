@@ -2,6 +2,8 @@
 package edu.asu.ecommerce;
 
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import edu.asu.ecommerce.client.Client;
 import java.io.IOException;
 import java.net.Socket;
@@ -35,6 +37,7 @@ public class Main {
         sendExit(c1, "karim");
         sendExit(c2, "bebo");
         runRestDepositTest();
+        runRestAddItemTest("karim@gmail.com");
     }
     
     public static void runRegistration(Client c, String username, String password, String email, String region){
@@ -96,6 +99,21 @@ public class Main {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST status: " + response.statusCode());
         System.out.println("REST body: " + response.body());
+    }
+
+    public static void runRestAddItemTest(String email) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"unitPrice\":1200,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/items"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST /items status: " + response.statusCode());
+        System.out.println("REST /items body: " + response.body());
     }
     
 }
