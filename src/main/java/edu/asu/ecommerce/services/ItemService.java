@@ -17,9 +17,9 @@ public class ItemService {
 		this.itemDao = new Item_DAO(conGlobal);
 	}
 
-	public String addItem(String itemName, String description, double unitPrice, int quantity,
+	public String addItem(String itemName, String description, double price, int quantity,
 						  int categoryId, int brandId) throws Exception {
-		Item item = new Item(itemName, description, unitPrice, quantity, categoryId, brandId);
+		Item item = new Item(itemName, description, price, quantity, categoryId, brandId);
 
 		boolean itemInserted = itemDao.insertItem(item);
 		if (!itemInserted) {

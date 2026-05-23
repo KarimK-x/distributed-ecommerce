@@ -104,7 +104,7 @@ public class Main {
     public static void runRestAddItemTest(String email) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 
-        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"unitPrice\":1200,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
+        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"price\":1200,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:7000/items"))
                 .header("Content-Type", "application/json")

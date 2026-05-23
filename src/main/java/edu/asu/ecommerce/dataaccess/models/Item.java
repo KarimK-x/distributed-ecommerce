@@ -6,15 +6,15 @@ public class Item {
     private final String id = UUID.randomUUID().toString();
     private String itemName;
     private String description;
-    private double unitPrice;
+    private double price;
     private int quantity;
     private int categoryId;
     private int brandId;
 
-    public Item(String itemName, String description, double unitPrice, int quantity, int categoryId, int brandId) {
+    public Item(String itemName, String description, double price, int quantity, int categoryId, int brandId) {
         this.itemName = itemName;
         this.description = description;
-        this.unitPrice = unitPrice;
+        this.price = price;
         this.quantity = quantity;
         this.categoryId = categoryId;
         this.brandId = brandId;
@@ -28,8 +28,8 @@ public class Item {
         this.quantity = quantity;
     }
 
-    public void setUnitPrice(double unitPrice) {
-        this.unitPrice = unitPrice;
+    public void setprice(double price) {
+        this.price = price;
     }
 
     public void setDescription(String description) {
@@ -44,8 +44,8 @@ public class Item {
         return description;
     }
 
-    public double getUnitPrice() {
-        return unitPrice;
+    public double getprice() {
+        return price;
     }
 
     public int getQuantity() {

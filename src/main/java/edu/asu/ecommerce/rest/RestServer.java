@@ -104,13 +104,13 @@ public class RestServer {
 			}
 			String itemName = getString(request, "itemName");
 			String description = getString(request, "description");
-			Double unitPrice = getDouble(request, "unitPrice");
+			Double price = getDouble(request, "price");
 			Integer quantity = getInteger(request, "quantity");
 			Integer categoryId = getInteger(request, "categoryId");
 			Integer brandId = getInteger(request, "brandId");
 			String email = getString(request, "email");
 
-			if (itemName == null || description == null || unitPrice == null || quantity == null
+			if (itemName == null || description == null || price == null || quantity == null
 					|| categoryId == null || brandId == null || email == null || email.isBlank()) {
 				ctx.status(400).result(errorResponse("400", "Missing required fields").toString());
 				return;
@@ -129,7 +129,7 @@ public class RestServer {
 				}
 
 				ItemService productServices = new ItemService(conGlobal);
-				String itemId = productServices.addItem(itemName, description, unitPrice, quantity,
+				String itemId = productServices.addItem(itemName, description, price, quantity,
 						categoryId, brandId);
 
 				UserService userService = new UserService(conSecure, conNorth, conSouth);

@@ -14,12 +14,12 @@ public class Item_DAO {
     }
 
     public boolean insertItem(Item item) throws SQLException {
-        String sql = "INSERT INTO Item (itemID, itemName, description, unitPrice, quantity, categoryID, brandID) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Item (itemID, itemName, description, price, quantity, categoryID, brandID) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, item.getId());
             pst.setString(2, item.getItemName());
             pst.setString(3, item.getDescription());
-            pst.setDouble(4, item.getUnitPrice());
+            pst.setDouble(4, item.getPrice());
             pst.setInt(5, item.getQuantity());
             pst.setInt(6, item.getCategoryId());
             pst.setInt(7, item.getBrandId());
