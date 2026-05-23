@@ -13,6 +13,8 @@
     import com.google.gson.JsonObject;
     import com.google.gson.JsonParser;
     import edu.asu.ecommerce.services.AuthenticationService;
+    import edu.asu.ecommerce.services.ItemService;
+    import edu.asu.ecommerce.services.UserService;
     import edu.asu.ecommerce.socket.handlers.*;
 
 
@@ -64,8 +66,9 @@
                 Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=South;", "sa", "123456");
                 
                 //----SERVICES----
-                AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth); //Sayebha using centralized db for now
-                //Add other services here, using the connection they need.
+                AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+                UserService userService = new UserService(conSecure, conNorth, conSouth);
+                ItemService itemService = new ItemService(conGlobal);
 
                 
                 while(isRunning){
@@ -84,6 +87,22 @@
                         case "LOGIN":
                             LoginHandler logHandler = new LoginHandler(authService, request);
                             response = logHandler.handle();
+                            break;
+                        case "VIEW_ACCOUNT":
+                            ViewAccountHandler viewHandler = new ViewAccountHandler(userService, itemService);
+                            response = viewHandler.handle(request);
+                            break;
+                        case "EDIT_ITEM":
+                            EditItemHandler editHandler = new EditItemHandler(userService, itemService);
+                            response = editHandler.handle(request);
+                            break;
+                        case "SEARCH_ITEMS":
+                            SearchItemsHandler searchHandler = new SearchItemsHandler(itemService, conNorth, conSouth);
+                            response = searchHandler.handle(request);
+                            break;
+                        case "MANAGE_INVENTORY":
+                            ManageInventoryHandler inventoryHandler = new ManageInventoryHandler(userService, itemService);
+                            response = inventoryHandler.handle(request);
                             break;
                         case "EXIT":
                             isRunning = false;

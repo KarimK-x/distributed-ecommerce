@@ -37,6 +37,27 @@ public class Brand_DAO {
         return insertBrand(new Brand(brandName, logoUrl));
     }
 
+    public Integer getBrandIdByName(String brandName) throws SQLException {
+        String sql = "SELECT brandID FROM Brand WHERE brandName = ?";
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, brandName);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("brandID");
+                }
+            }
+        }
+        return null;
+    }
+
+    public int findOrCreateBrand(String brandName, String logoUrl) throws SQLException {
+        Integer existingId = getBrandIdByName(brandName);
+        if (existingId != null) {
+            return existingId;
+        }
+        return insertBrand(brandName, logoUrl);
+    }
+
     private int getNextBrandId() throws SQLException {
         String sql = "SELECT COALESCE(MAX(brandID), 0) + 1 AS nextId FROM Brand";
         try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
