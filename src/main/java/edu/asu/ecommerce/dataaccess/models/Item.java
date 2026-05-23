@@ -28,7 +28,7 @@ public class Item {
         this.quantity = quantity;
     }
 
-    public void setprice(double price) {
+    public void setPrice(double price) {
         this.price = price;
     }
 
@@ -44,7 +44,7 @@ public class Item {
         return description;
     }
 
-    public double getprice() {
+    public double getPrice() {
         return price;
     }
 
