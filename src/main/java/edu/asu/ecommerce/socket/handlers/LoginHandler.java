@@ -5,7 +5,7 @@
 package edu.asu.ecommerce.socket.handlers;
 
 import com.google.gson.JsonObject;
-import edu.asu.ecommerce.services.UserService;
+import edu.asu.ecommerce.services.AuthenticationService;
 
 import java.sql.SQLException;
 
@@ -14,12 +14,12 @@ import java.sql.SQLException;
  * @author Dell
  */
 public class LoginHandler {
-    private final JsonObject response = new JsonObject();
-    private final UserService userService;
-    private final JsonObject request;
+    private JsonObject response = new JsonObject();
+    private AuthenticationService authService;
+    private JsonObject request;
 
-    public LoginHandler(UserService userService, JsonObject request){
-        this.userService = userService;
+    public LoginHandler(AuthenticationService userService, JsonObject request){
+        this.authService = userService;
         this.request = request;
     }
 
@@ -28,7 +28,7 @@ public class LoginHandler {
         String password = request.get("password").getAsString();
 
         try{
-            boolean isValid = userService.authenticate(email, password);
+            boolean isValid = authService.authenticate(email, password);
             if (isValid) {
                 response.addProperty("status", "OK");
                 response.addProperty("message", "Login successful");

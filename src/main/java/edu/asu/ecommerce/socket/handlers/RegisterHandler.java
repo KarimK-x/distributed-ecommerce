@@ -5,16 +5,16 @@
 package edu.asu.ecommerce.socket.handlers;
 
 import com.google.gson.JsonObject;
-import edu.asu.ecommerce.services.UserService;
+import edu.asu.ecommerce.services.AuthenticationService;
 
 import java.sql.SQLException;
 
 
 public class RegisterHandler {
-    private UserService userService;    
+    private AuthenticationService authService;    
 
-    public RegisterHandler(UserService us){
-        this.userService = us;
+    public RegisterHandler(AuthenticationService us){
+        this.authService = us;
     }
     
     public JsonObject handle(JsonObject request){
@@ -27,7 +27,7 @@ public class RegisterHandler {
         String region = request.get("region").getAsString();
         
         try{
-            userService.createUser(username,email,password,region);
+            authService.createUser(username,email,password,region);
             response.addProperty("status","OK");
             response.addProperty("message", "Account Created");
         }

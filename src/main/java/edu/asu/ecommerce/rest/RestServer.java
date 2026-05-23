@@ -8,6 +8,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import edu.asu.ecommerce.dataaccess.models.User;
 import edu.asu.ecommerce.services.UserService;
+import edu.asu.ecommerce.services.AuthenticationService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
@@ -79,8 +80,10 @@ public class RestServer {
 					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 				UserService userService = new UserService(conSecure, conNorth, conSouth);
-				userService.depositCash(email, amount);
-				User user = userService.getUserByEmail(email);
+				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+
+                userService.depositCash(email, amount);
+				User user = authService.getUserByEmail(email);
 
 				if (user == null) {
 					ctx.status(404).result(errorResponse("404", "User not found").toString());
