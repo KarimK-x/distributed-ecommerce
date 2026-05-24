@@ -18,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 
@@ -33,6 +34,11 @@ public class Main {
     private static final String DB_BASE_URL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
     private static final String DB_USER = "sa";
     private static final String DB_PASS = "123456";
+
+    private static final String TEST_STORE_EMAIL = "partner@megastore.com";
+    private static final String TEST_STORE_API_KEY = "sk_test_12345ABCDE";
+    private static final String TEST_STORE_NAME = "MegaStore Front";
+    private static final String TEST_STORE_ID = "N-9999-EXT"; // Hardcoded North region ID for testing
 
     private static int testCategoryId;
     private static int testBrandId;
@@ -518,5 +524,60 @@ public class Main {
         } catch (IOException e) {
             System.out.println("BULK_UPLOAD_ITEMS error: " + e);
         }
+    }
+
+    public static void runRestExternalPurchase(String apiKey, String itemId) throws Exception {
+        String json = "{\"itemId\":\"" + itemId + "\"}";
+        HttpClient client = HttpClient.newHttpClient();
+        
+        // Notice the x-api-key header implementation
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/purchase"))
+                .header("Content-Type", "application/json")
+                .header("x-api-key", apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+                
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST POST /purchase (External API) status: " + response.statusCode());
+        System.out.println("REST POST /purchase (External API) body:\n" + formatJson(response.body()));
+    }
+
+    private static void ensureExternalStoreData() throws SQLException {
+        String secureUrl = DB_BASE_URL + "databaseName=Secure;";
+        String northUrl = DB_BASE_URL + "databaseName=North;";
+
+        try (Connection conSecure = DriverManager.getConnection(secureUrl, DB_USER, DB_PASS);
+             Connection conNorth = DriverManager.getConnection(northUrl, DB_USER, DB_PASS)) {
+
+            String insertProfile = "IF NOT EXISTS (SELECT 1 FROM Profile WHERE userID = ?) " +
+                                   "INSERT INTO Profile (userID, userName, createdAt, region) VALUES (?, ?, GETDATE(), 'North')";
+            try (PreparedStatement pst = conNorth.prepareStatement(insertProfile)) {
+                pst.setString(1, TEST_STORE_ID);
+                pst.setString(2, TEST_STORE_ID);
+                pst.setString(3, TEST_STORE_NAME);
+                pst.executeUpdate();
+            }
+
+            String insertUserInfo = "IF NOT EXISTS (SELECT 1 FROM UserInfo WHERE userID = ?) " +
+                                    "INSERT INTO UserInfo (userID, email, passwordHash, balance) VALUES (?, ?, 'no-login', 50000.0)";
+            try (PreparedStatement pst = conSecure.prepareStatement(insertUserInfo)) {
+                pst.setString(1, TEST_STORE_ID);
+                pst.setString(2, TEST_STORE_ID);
+                pst.setString(3, TEST_STORE_EMAIL);
+                pst.executeUpdate();
+            }
+
+            String insertStore = "IF NOT EXISTS (SELECT 1 FROM ExternalStoreInfo WHERE apiKey = ?) " +
+                                 "INSERT INTO ExternalStoreInfo (storeID, ownerID, storeName, apiKey) VALUES (NEWID(), ?, ?, ?)";
+            try (PreparedStatement pst = conNorth.prepareStatement(insertStore)) {
+                pst.setString(1, TEST_STORE_API_KEY);
+                pst.setString(2, TEST_STORE_ID);
+                pst.setString(3, TEST_STORE_NAME);
+                pst.setString(4, TEST_STORE_API_KEY);
+                pst.executeUpdate();
+            }
+        }
+        System.out.println("External Store test data ready: apiKey=" + TEST_STORE_API_KEY);
     }
 }

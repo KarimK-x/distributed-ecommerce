@@ -7,11 +7,15 @@ package edu.asu.ecommerce.rest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import edu.asu.ecommerce.dataaccess.ExternalStoreInfo_DAO;
 import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
+import edu.asu.ecommerce.dataaccess.models.ExternalStoreInfo;
 import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.User;
 import edu.asu.ecommerce.services.AuthenticationService;
 import edu.asu.ecommerce.services.ItemService;
+import edu.asu.ecommerce.services.OrderService;
 import edu.asu.ecommerce.services.UserService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -361,6 +365,79 @@ public class RestServer {
 		} catch (Exception e) {
 			ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
 		}
+	}
+
+	private static void implementExternalPurchase(Context ctx) {
+		// 1. Extract the API Key from the headers (Standard REST practice)
+		String apiKey = ctx.header("x-api-key");
+		
+		if (apiKey == null || apiKey.isBlank()) {
+			ctx.status(401).result(errorResponse("401", "Missing x-api-key header").toString());
+			return;
+		}
+
+		JsonObject request = parseJson(ctx);
+		if (request == null) {
+			ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+			return;
+		}
+
+		String itemId = getString(request, "itemId");
+		if (itemId == null) {
+			ctx.status(400).result(errorResponse("400", "itemId is required").toString());
+			return;
+		}
+
+		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+			Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+			Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+			// 2. Instantiate the new DAOs (Checking both regions for the API key)
+			ExternalStoreInfo_DAO northStoreDao = new ExternalStoreInfo_DAO(conNorth);
+			ExternalStoreInfo_DAO southStoreDao = new ExternalStoreInfo_DAO(conSouth);
+			
+			ExternalStoreInfo storeInfo = northStoreDao.getStoreByApiKey(apiKey);
+			if (storeInfo == null) {
+				storeInfo = southStoreDao.getStoreByApiKey(apiKey);
+			}
+
+			// 3. Validate the API Key
+			if (storeInfo == null) {
+				ctx.status(403).result(errorResponse("403", "Invalid API Key").toString());
+				return;
+			}
+
+			ItemService itemService = new ItemService(conGlobal);
+			Item item = itemService.getItemById(itemId);
+			if (item == null) {
+				ctx.status(404).result(errorResponse("404", "Item not found").toString());
+				return;
+			}
+
+			// 4. Use the ownerID from the store profile to execute the existing logic
+			String buyerId = storeInfo.getOwnerId();
+			
+			UserService userService = new UserService(conSecure, conNorth, conSouth);
+			userService.purchase(buyerId, item);
+			
+			OrderService orderService = new OrderService(conSecure);
+			orderService.processFullOrderTransaction(
+				buyerId,
+				item.getSellerId(),
+				itemId,
+				item.getPrice(),
+				"EXTERNAL_STORE" 
+			);
+
+			JsonObject response = new JsonObject();
+			response.addProperty("status", "OK");
+			response.addProperty("message", "External purchase successful for store: " + storeInfo.getStoreName());
+			ctx.result(response.toString());
+
+		} catch (Exception e) {
+			ctx.status(500).result(errorResponse("500", e.getMessage()).toString());
+	    }
 	}
 
 }
