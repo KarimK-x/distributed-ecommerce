@@ -55,6 +55,10 @@ public class RestServer {
 		app.post("/deposit", ctx -> {
             implementDeposit(ctx);
         });
+
+		app.post("/purchase", ctx -> {
+            implementExternalPurchase(ctx);
+        });
 	}
 
 	private static JsonObject parseJson(Context ctx) {
@@ -431,8 +435,12 @@ public class RestServer {
 			);
 
 			JsonObject response = new JsonObject();
+
+			
 			response.addProperty("status", "OK");
 			response.addProperty("message", "External purchase successful for store: " + storeInfo.getStoreName());
+			response.addProperty("itemId", item.getId());
+        	response.addProperty("itemName", item.getItemName());
 			ctx.result(response.toString());
 
 		} catch (Exception e) {

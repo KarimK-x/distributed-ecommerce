@@ -57,6 +57,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         ensureTestCatalogData();
+        ensureExternalStoreData();
         
         Client sellerClient = new Client(new Socket("localhost", 1234));
         Client buyerClient = new Client(new Socket("localhost", 1234));
@@ -101,6 +102,12 @@ public class Main {
 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS ===");
                 runSocketSearch(sellerClient, null, "Dell");
+
+                System.out.println("\n=== [EXTERNAL STORE] Integration Test ===");
+                String externalItemId = runRestAddItem(TEST_EMAIL, "Partner Exclusive Headset", 85.00);
+                System.out.println("[EXTERNAL STORE] Target Item Created: " + externalItemId);
+                
+                runRestExternalPurchase(TEST_STORE_API_KEY, externalItemId);
                 
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: search items ===");
                 runRestSearch(null, "Dell");
