@@ -4,11 +4,6 @@ import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.UserInventory;
 import edu.asu.ecommerce.dataaccess.models.User_Info;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +31,7 @@ public class UserInventory_DAO {
     }
 
     public List<UserInventory> getInventoryByUserAndState(String userId, String state) throws SQLException {
-        String sql = "SELECT userID, itemID, state, dateCreated, region FROM UserInventory WHERE userID = ? AND state = ? ORDER BY COALESCE(dateCreated)";
+        String sql = "SELECT userID, itemID, state, dateCreated, region FROM UserInventory WHERE userID = ? AND state = ? ORDER BY dateCreated";
         List<UserInventory> results = new ArrayList<>();
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, userId);

@@ -124,6 +124,14 @@ public class Main {
             System.out.println("\n=== [" + sellerUsername + "] Socket: SEARCH_ITEMS (after edit) ===");
             runSocketSearch(sellerClient, "Gaming", null);
 
+            System.out.println("\n=== [" + sellerUsername + "] Socket: GET_REPORT ===");
+            runReportTest(sellerClient, sellerEmail);
+
+            if(buyerId!=null){
+                System.out.println("\n=== [" + buyerUsername + "] Socket: GET_REPORT ===");
+                runReportTest(buyerClient, buyerEmail);
+            }
+
             sendExit(sellerClient, sellerUsername);
             sendExit(buyerClient, buyerUsername);
         } catch (Exception e) {
