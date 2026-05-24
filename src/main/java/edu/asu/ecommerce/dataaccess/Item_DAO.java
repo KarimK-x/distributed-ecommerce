@@ -4,6 +4,7 @@ import edu.asu.ecommerce.dataaccess.models.Item;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class Item_DAO {
@@ -33,5 +34,26 @@ public class Item_DAO {
             pst.setString(1, itemId);
             return pst.executeUpdate() > 0;
         }
+    }
+
+    public Item getItemById(String itemId) throws SQLException {
+        String sql = "SELECT itemID, itemName, description, price, quantity, categoryID, brandID FROM Item WHERE itemID = ?";
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, itemId);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return new Item(
+                            rs.getString("itemID"),
+                            rs.getString("itemName"),
+                            rs.getString("description"),
+                            rs.getDouble("price"),
+                            rs.getInt("quantity"),
+                            rs.getInt("categoryID"),
+                            rs.getInt("brandID")
+                    );
+                }
+            }
+        }
+        return null;
     }
 }
