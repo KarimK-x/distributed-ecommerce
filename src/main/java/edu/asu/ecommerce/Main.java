@@ -1,5 +1,7 @@
 package edu.asu.ecommerce;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -34,6 +36,18 @@ public class Main {
 
     private static int testCategoryId;
     private static int testBrandId;
+
+    // Helper for pretty-printing JSON output
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+    private static String formatJson(String jsonString) {
+        try {
+            JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
+            return gson.toJson(json);
+        } catch (Exception e) {
+            return jsonString; // Fallback just in case the server sends a plain text error
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         ensureTestCatalogData();
@@ -192,7 +206,7 @@ public class Main {
 
             System.out.println("[User " + username + "]: Sending REGISTER...");
             c.sendRequest(req);
-            System.out.println("[User " + username + "]: " + c.receiveResponse());
+            System.out.println("[User " + username + "]:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("Registration error: " + e);
         }
@@ -208,7 +222,7 @@ public class Main {
             System.out.println("[User " + username + "]: Sending LOGIN...");
             c.sendRequest(loginReq);
             String responseStr = c.receiveResponse();
-            System.out.println("[User " + username + "]: " + responseStr);
+            System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
 
             JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
             if ("OK".equals(response.get("status").getAsString()) && response.has("userId")) {
@@ -228,7 +242,7 @@ public class Main {
 
             System.out.println("Sending VIEW_ACCOUNT for " + email + "...");
             c.sendRequest(req);
-            System.out.println("Response: " + c.receiveResponse());
+            System.out.println("Response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("VIEW_ACCOUNT error: " + e);
         }
@@ -242,7 +256,7 @@ public class Main {
 
             System.out.println("Sending MANAGE_INVENTORY for userId " + userId + "...");
             c.sendRequest(req);
-            System.out.println("Response: " + c.receiveResponse());
+            System.out.println("Response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("MANAGE_INVENTORY error: " + e);
         }
@@ -261,7 +275,7 @@ public class Main {
 
             System.out.println("Sending SEARCH_ITEMS...");
             c.sendRequest(req);
-            System.out.println("Response: " + c.receiveResponse());
+            System.out.println("Response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("SEARCH_ITEMS error: " + e);
         }
@@ -282,7 +296,7 @@ public class Main {
             req.addProperty("brandId", testBrandId);
             System.out.println("Sending EDIT_ITEM for itemId " + itemId + "...");
             c.sendRequest(req);
-            System.out.println("Response: " + c.receiveResponse());
+            System.out.println("Response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("EDIT_ITEM error: " + e);
         }
@@ -314,7 +328,7 @@ public class Main {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST /items/search status: " + response.statusCode());
-        System.out.println("REST /items/search body: " + response.body());
+        System.out.println("REST /items/search body:\n" + formatJson(response.body()));
     }
 
     public static void runRestEditItem(String itemId, String email, String itemName,
@@ -330,7 +344,7 @@ public class Main {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST PUT /items/" + itemId + " status: " + response.statusCode());
-        System.out.println("REST PUT /items/" + itemId + " body: " + response.body());
+        System.out.println("REST PUT /items/" + itemId + " body:\n" + formatJson(response.body()));
     }
 
     public static String runSocketAddItem(Client c, String username, String email, String itemName, double price) throws Exception {
@@ -346,7 +360,7 @@ public class Main {
         System.out.println("[User " + username + "]: Sending ADD_ITEM for " + itemName + "...");
         c.sendRequest(req);
         String responseStr = c.receiveResponse();
-        System.out.println("[User " + username + "]: " + responseStr);
+        System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
 
         JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
         if (!"OK".equals(response.get("status").getAsString())) {
@@ -363,7 +377,7 @@ public class Main {
 
             System.out.println("[User " + username + "]: Sending purchase request for item ID " + itemId + "...");
             c.sendRequest(purchaseReq);
-            System.out.println("[User " + username + "]: Server replied: " + c.receiveResponse());
+            System.out.println("[User " + username + "]: Server replied:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("Purchase Error: " + e);
         }
@@ -378,7 +392,7 @@ public class Main {
         System.out.println("[User " + username + "]: Sending DELETE_ITEM for item ID " + itemId + "...");
         c.sendRequest(req);
         String responseStr = c.receiveResponse();
-        System.out.println("[User " + username + "]: " + responseStr);
+        System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
 
         JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
         if (!"OK".equals(response.get("status").getAsString())) {
@@ -395,7 +409,7 @@ public class Main {
         System.out.println("[User " + username + "]: Sending DEPOSIT for " + amount + "...");
         c.sendRequest(req);
         String responseStr = c.receiveResponse();
-        System.out.println("[User " + username + "]: " + responseStr);
+        System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
 
         JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
         if (!"OK".equals(response.get("status").getAsString())) {
@@ -424,7 +438,7 @@ public class Main {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST /deposit status: " + response.statusCode());
-        System.out.println("REST /deposit body: " + response.body());
+        System.out.println("REST /deposit body:\n" + formatJson(response.body()));
     }
 
     public static String runRestAddItem(String email) throws Exception {
@@ -441,7 +455,7 @@ public class Main {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST /items status: " + response.statusCode());
-        System.out.println("REST /items body: " + response.body());
+        System.out.println("REST /items body:\n" + formatJson(response.body()));
         JsonObject body = JsonParser.parseString(response.body()).getAsJsonObject();
         if (!"OK".equals(body.get("status").getAsString())) {
             throw new RuntimeException("Add item failed: " + response.body());
@@ -459,7 +473,7 @@ public class Main {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST DELETE /items/" + itemId + " status: " + response.statusCode());
-        System.out.println("REST DELETE /items/" + itemId + " body: " + response.body());
+        System.out.println("REST DELETE /items/" + itemId + " body:\n" + formatJson(response.body()));
     }
 
     private static void ensureTestCatalogData() throws SQLException {
@@ -479,7 +493,7 @@ public class Main {
             req.addProperty("email", email);
 
             c.sendRequest(req);
-            System.out.println("REPORT response: " + c.receiveResponse());
+            System.out.println("REPORT response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("Report Error: " + e);
         }
@@ -489,8 +503,8 @@ public class Main {
      * Sends a BULK_UPLOAD_ITEMS socket action with CSV content embedded in the JSON payload.
      *
      * Example csvContent:
-     *   "itemName,description,price,quantity,categoryId,brandId,email\n
-     *    Gaming Laptop,Fast laptop,999.99,5,1,1,seller@email.com"
+     * "itemName,description,price,quantity,categoryId,brandId,email\n
+     * Gaming Laptop,Fast laptop,999.99,5,1,1,seller@email.com"
      */
     public static void runBulkUploadItems(Client c, String csvContent) {
         try {
@@ -500,7 +514,7 @@ public class Main {
 
             System.out.println("Sending BULK_UPLOAD_ITEMS...");
             c.sendRequest(req);
-            System.out.println("BULK_UPLOAD_ITEMS response: " + c.receiveResponse());
+            System.out.println("BULK_UPLOAD_ITEMS response:\n" + formatJson(c.receiveResponse()));
         } catch (IOException e) {
             System.out.println("BULK_UPLOAD_ITEMS error: " + e);
         }
