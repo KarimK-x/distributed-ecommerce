@@ -51,7 +51,7 @@ public class Main {
             JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
             return gson.toJson(json);
         } catch (Exception e) {
-            return jsonString; // Fallback just in case the server sends a plain text error
+            return jsonString; 
         }
     }
 
@@ -89,10 +89,8 @@ public class Main {
                 String availableItemId = runSocketAddItem(sellerClient, TEST_USERNAME, TEST_EMAIL, "Office Laptop", 12);
                 System.out.println("[" + TEST_USERNAME + "] Created itemId (available): " + availableItemId);
 
-                // SYNC POINT 1: Hand the itemId over to the buyer thread!
                 publishedItemFuture.complete(purchasedItemId);
 
-                // SYNC POINT 2: Wait for the buyer to finish purchasing before checking account state
                 System.out.println("[" + TEST_USERNAME + "] Waiting for buyer to complete transaction...");
                 purchaseCompletedFuture.join();
                 System.out.println("[" + TEST_USERNAME + "] Transaction verified. Resuming checks...");
@@ -182,7 +180,6 @@ public class Main {
                     System.out.println("\n=== [" + TEST_USERNAME_2 + "] Item found! Purchasing... ===");
                     runPurchase(buyerClient, TEST_USERNAME_2, itemIdToBuy);
                     
-                    // SYNC POINT 2: Tell the seller we are done!
                     purchaseCompletedFuture.complete(null);
                 }
 
