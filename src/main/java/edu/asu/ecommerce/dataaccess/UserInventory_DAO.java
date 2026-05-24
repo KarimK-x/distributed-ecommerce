@@ -23,14 +23,14 @@ public class UserInventory_DAO {
     }
 
     public boolean insertInventory(UserInventory inventory) throws SQLException {
-        String sql = "INSERT INTO UserInventory (userID, itemID, state, dateCreated, dateSold, region) VALUES (?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO UserInventory (userID, itemID, state, dateCreated, region) VALUES (?, ?, ?, ?, ?)";
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             System.out.println(inventory.getUserId());
             pst.setString(1, inventory.getUserId());
             pst.setString(2, inventory.getItemId());
             pst.setString(3, inventory.getState());
             pst.setTimestamp(4, Timestamp.valueOf(inventory.getDateCreated()));
-            pst.setString(6, inventory.getRegion());
+            pst.setString(5, inventory.getRegion());
             return pst.executeUpdate() > 0;
         }
     }

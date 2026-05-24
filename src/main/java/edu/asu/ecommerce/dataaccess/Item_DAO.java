@@ -5,7 +5,6 @@ import edu.asu.ecommerce.dataaccess.models.Item;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,7 +67,7 @@ public class Item_DAO {
             return results;
         }
 
-        StringBuilder sql = new StringBuilder("SELECT itemID, itemName, description, price, quantity, categoryID, brandID FROM Item WHERE itemID IN (");
+        StringBuilder sql = new StringBuilder("SELECT * FROM Item WHERE itemID IN (");
         for (int i = 0; i < itemIds.size(); i++) {
             sql.append("?");
             if (i < itemIds.size() - 1) {
@@ -116,8 +115,8 @@ public class Item_DAO {
 
     public List<Item> searchByNameAndBrand(String nameQuery, String brandQuery) throws SQLException {
         StringBuilder sql = new StringBuilder(
-                "SELECT DISTINCT i.itemID, i.itemName, i.description, i.price, i.quantity, i.categoryID, i.brandID "
-                        + "FROM Item i INNER JOIN Brand b ON i.brandID = b.brandID WHERE 1=1");
+            "SELECT DISTINCT i.itemID, i.itemName, i.description, i.price, i.quantity, i.categoryID, i.brandID, i.sellerID "
+                + "FROM Item i INNER JOIN Brand b ON i.brandID = b.brandID WHERE 1=1");
         List<String> params = new ArrayList<>();
 
         if (nameQuery != null && !nameQuery.isBlank()) {
@@ -155,7 +154,7 @@ public class Item_DAO {
                 rs.getInt("quantity"),
                 rs.getInt("categoryID"),
                 rs.getInt("brandID"),
-                rs.getString("selledID")
+                rs.getString("sellerID")
         );
     }
 }
