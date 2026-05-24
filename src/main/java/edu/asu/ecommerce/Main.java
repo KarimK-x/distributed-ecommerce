@@ -23,6 +23,11 @@ public class Main {
     private static final String TEST_EMAIL = "ziad@gmail.com";
     private static final String TEST_PASSWORD = "1111";
     private static final String TEST_USERNAME = "ziad";
+    private static final String TEST_EMAIL_2 = "bebo@gmail.com";
+    private static final String TEST_PASSWORD_2 = "1234";
+    private static final String TEST_USERNAME_2 = "bebo";
+    private static final String TEST_REGION_1 = "North";
+    private static final String TEST_REGION_2 = "South";
     private static final String DB_BASE_URL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
     private static final String DB_USER = "sa";
     private static final String DB_PASS = "123456";
@@ -34,47 +39,64 @@ public class Main {
         ensureTestCatalogData();
 
         Client c1 = new Client(new Socket("localhost", 1234));
+        Client c2 = new Client(new Socket("localhost", 1234));
 
-        System.out.println("=== Setup: register & login ===");
-        runRegistration(c1, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, "North");
-        String userId = runLogin(c1, TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME);
-        if (userId == null) {
-            System.out.println("Login failed; stopping tests.");
-            sendExit(c1, TEST_USERNAME);
-            return;
-        }
-        System.out.println("Logged in userId: " + userId);
+        Thread user1 = new Thread(() -> runDemoFlow(c1, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, TEST_REGION_1));
+        Thread user2 = new Thread(() -> runDemoFlow(c2, TEST_USERNAME_2, TEST_PASSWORD_2, TEST_EMAIL_2, TEST_REGION_2));
 
-        System.out.println("\n=== REST: deposit & add item ===");
-        runRestDepositTest(TEST_EMAIL, 100);
-        String itemId = runRestAddItemTest(TEST_EMAIL);
-        System.out.println("Created itemId: " + itemId);
+        user1.start();
+        user2.start();
 
-        System.out.println("\n=== Socket: MANAGE_INVENTORY ===");
-        runManageInventory(c1, userId);
-
-        System.out.println("\n=== Socket: SEARCH_ITEMS ===");
-        runSocketSearch(c1, null, "Dell");
-
-        System.out.println("\n=== REST: search items ===");
-        runRestSearch(null, "Dell");
-
-        System.out.println("\n=== Socket: EDIT_ITEM ===");
-        runEditItem(c1, TEST_EMAIL, itemId, "Gaming Laptop Pro", "Updated description", 1100, 1);
-
-        System.out.println("\n=== REST: edit item ===");
-        runRestEditItem(itemId, TEST_EMAIL, "Gaming Laptop Pro REST", "Updated via REST", 1150, 1);
-
-        System.out.println("\n=== Socket: VIEW_ACCOUNT ===");
-        runViewAccount(c1, TEST_EMAIL);
-
-        System.out.println("\n=== Socket: SEARCH_ITEMS (after edit) ===");
-        runSocketSearch(c1, "Gaming", null);
-
-        sendExit(c1, TEST_USERNAME);
+        user1.join();
+        user2.join();
     }
 
-    public static void runRegistration(Client c, String username, String password, String email, String region) {
+    private static void runDemoFlow(Client c, String username, String password, String email, String region) {
+        try {
+            System.out.println("=== [" + username + "] Setup: register & login ===");
+            runRegistration(c, username, password, email, region);
+            String userId = runLogin(c, email, password, username);
+            if (userId == null) {
+                System.out.println("[" + username + "] Login failed; stopping tests.");
+                sendExit(c, username);
+                return;
+            }
+            System.out.println("[" + username + "] Logged in userId: " + userId);
+
+            System.out.println("\n=== [" + username + "] REST: deposit & add item ===");
+            runRestDepositTest(email, 100);
+            String itemId = runRestAddItemTest(email);
+            System.out.println("[" + username + "] Created itemId: " + itemId);
+
+            System.out.println("\n=== [" + username + "] Socket: MANAGE_INVENTORY ===");
+            runManageInventory(c, userId);
+
+            System.out.println("\n=== [" + username + "] Socket: SEARCH_ITEMS ===");
+            runSocketSearch(c, null, "Dell");
+
+            System.out.println("\n=== [" + username + "] REST: search items ===");
+            runRestSearch(null, "Dell");
+
+            System.out.println("\n=== [" + username + "] Socket: EDIT_ITEM ===");
+            runEditItem(c, email, itemId, "Gaming Laptop Pro", "Updated description", 1100, 1);
+
+            System.out.println("\n=== [" + username + "] REST: edit item ===");
+            runRestEditItem(itemId, email, "Gaming Laptop Pro REST", "Updated via REST", 1150, 1);
+
+            System.out.println("\n=== [" + username + "] Socket: VIEW_ACCOUNT ===");
+            runViewAccount(c, email);
+
+            System.out.println("\n=== [" + username + "] Socket: SEARCH_ITEMS (after edit) ===");
+            runSocketSearch(c, "Gaming", null);
+
+            sendExit(c, username);
+        } catch (Exception e) {
+            System.out.println("[" + username + "] Demo flow error: " + e.getMessage());
+            sendExit(c, username);
+        }
+    }
+    
+    public static void runRegistration(Client c, String username, String password, String email, String region){
         try {
             JsonObject req = new JsonObject();
             req.addProperty("action", "REGISTER");
@@ -285,5 +307,18 @@ public class Main {
             testBrandId = brandDao.findOrCreateBrand("Dell", "https://example.com/dell.png");
         }
         System.out.println("Test catalog ready: categoryId=" + testCategoryId + ", brandId=" + testBrandId);
+    }
+
+    public static void runReportTest(Client c, String email) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "GET_REPORT");
+            req.addProperty("email", email);
+
+            c.sendRequest(req);
+            System.out.println("REPORT response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("Report Error: " + e);
+        }
     }
 }

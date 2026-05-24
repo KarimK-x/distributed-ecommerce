@@ -12,9 +12,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import edu.asu.ecommerce.dataaccess.LedgerEntry_DAO;
 import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
 import edu.asu.ecommerce.dataaccess.UserInfo_DAO;
 import edu.asu.ecommerce.dataaccess.models.Item;
+import edu.asu.ecommerce.dataaccess.models.LedgerEntry;
 import edu.asu.ecommerce.dataaccess.models.UserInventory;
 import edu.asu.ecommerce.dataaccess.models.User_Info;
 public class UserService{
@@ -25,6 +27,7 @@ public class UserService{
     private UserInfo_DAO userInfoDao;
     private UserInventory_DAO inventoryDaoNorth;
     private UserInventory_DAO inventoryDaoSouth;
+    private LedgerEntry_DAO ledgerEntryDao;
     
     
     public UserService(Connection con_secure, Connection con_north, Connection con_south) throws SQLException{
@@ -35,6 +38,7 @@ public class UserService{
         this.userInfoDao = new UserInfo_DAO(conSecure);
         this.inventoryDaoNorth = new UserInventory_DAO(conNorth);
         this.inventoryDaoSouth = new UserInventory_DAO(conSouth);
+        this.ledgerEntryDao = new LedgerEntry_DAO(conSecure);
 
     }
 
@@ -73,10 +77,23 @@ public class UserService{
         if (info == null) {
             throw new Exception("user not found");
         }
-
+        
         boolean updated = userInfoDao.incrementBalance(info.getId(), amount);
         if (!updated) {
             throw new SQLException("balance update failed");
+        }
+
+        LedgerEntry entry = new LedgerEntry(
+                info.getId(),
+                amount,
+                "DEPOSIT",
+                null,
+                LocalDateTime.now()
+        );
+        boolean inserted = ledgerEntryDao.insertEntry(entry);
+
+        if(!inserted){
+            throw new SQLException("Couldn't insert ledger entry");
         }
     }
 

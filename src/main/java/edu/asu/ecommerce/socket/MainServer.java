@@ -13,6 +13,7 @@
     import com.google.gson.JsonObject;
     import com.google.gson.JsonParser;
     import edu.asu.ecommerce.services.AuthenticationService;
+    import edu.asu.ecommerce.services.ReportService;
     import edu.asu.ecommerce.services.ItemService;
     import edu.asu.ecommerce.services.UserService;
     import edu.asu.ecommerce.socket.handlers.*;
@@ -66,7 +67,9 @@
                 Connection conSouth  = DriverManager.getConnection(baseURL + "databaseName=South;", "sa", "123456");
                 
                 //----SERVICES----
-                AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+                AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth); //Sayebha using centralized db for now
+                //Add other services here, using the connection they need.
+                ReportService reportService = new ReportService(conSecure, conGlobal, conNorth, conSouth);
                 UserService userService = new UserService(conSecure, conNorth, conSouth);
                 ItemService itemService = new ItemService(conGlobal);
 
@@ -87,6 +90,10 @@
                         case "LOGIN":
                             LoginHandler logHandler = new LoginHandler(authService, request);
                             response = logHandler.handle();
+                            break;
+                        case "GET_REPORT":
+                            ReportHandler repHandler = new ReportHandler(reportService, request);
+                            response = repHandler.handle();
                             break;
                         case "VIEW_ACCOUNT":
                             ViewAccountHandler viewHandler = new ViewAccountHandler(userService, itemService);
