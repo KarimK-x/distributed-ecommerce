@@ -102,11 +102,11 @@ public class Main {
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: VIEW_ACCOUNT ===");
                 runViewAccount(sellerClient, TEST_EMAIL);
               
-                System.out.println("\n=== [" + sellerUsername + "] Socket: BULK_UPLOAD_ITEMS ===");
+                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: BULK_UPLOAD_ITEMS ===");
                 String bulkCsv = "itemName,description,price,quantity,categoryId,brandId,email\n"
-                    + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + sellerEmail + "\n"
-                    + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + sellerEmail + "\n"
-                    + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + sellerEmail;
+                    + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+                    + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+                    + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL;
                 runBulkUploadItems(sellerClient, bulkCsv);
 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: GET_REPORT ===");
