@@ -7,11 +7,11 @@ public class LedgerEntry {
     private String userId;
     private double amount;
     private String transactionType;
-    private int orderId;
+    private Integer orderId = null;
     private LocalDate timeStamp;
 
     // Constructor for creating NEW entries (without entryId)
-    public LedgerEntry(String userId, double amount, String transactionType, int orderId, LocalDate timeStamp) {
+    public LedgerEntry(String userId, double amount, String transactionType, Integer orderId, LocalDate timeStamp) {
         this.userId = userId;
         this.amount = amount;
         this.transactionType = transactionType;
@@ -20,7 +20,7 @@ public class LedgerEntry {
     }
 
     // Constructor for reading EXISTING entries from DB
-    public LedgerEntry(int entryId, String userId, double amount, String transactionType, int orderId, LocalDate timeStamp) {
+    public LedgerEntry(int entryId, String userId, double amount, String transactionType, Integer orderId, LocalDate timeStamp) {
         this.entryId = entryId;
         this.userId = userId;
         this.amount = amount;
@@ -37,7 +37,7 @@ public class LedgerEntry {
     public void setAmount(double amount) { this.amount = amount; }
     public String getTransactionType() { return transactionType; }
     public void setTransactionType(String transactionType) { this.transactionType = transactionType; }
-    public int getOrderId() { return orderId; }
+    public Integer getOrderId() { return orderId; }
     public void setOrderId(int orderId) { this.orderId = orderId; }
     public LocalDate getTimeStamp() { return timeStamp; }
     public void setTimeStamp(LocalDate timeStamp) { this.timeStamp = timeStamp; }

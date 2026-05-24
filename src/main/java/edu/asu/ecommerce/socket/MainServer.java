@@ -14,6 +14,9 @@
     import com.google.gson.JsonParser;
     import edu.asu.ecommerce.dataaccess.models.Item;
     import edu.asu.ecommerce.services.AuthenticationService;
+    import edu.asu.ecommerce.services.ReportService;
+    import edu.asu.ecommerce.services.ItemService;
+    import edu.asu.ecommerce.services.UserService;
     import edu.asu.ecommerce.services.ItemService;
     import edu.asu.ecommerce.services.OrderService;
     import edu.asu.ecommerce.services.UserService;
@@ -75,6 +78,7 @@
 
                 String user_logged = null;
 
+                ReportService reportService = new ReportService(conSecure, conGlobal, conNorth, conSouth);
 
                 
                 while(isRunning){
@@ -98,6 +102,26 @@
                         case "PURCHASE":
                             PurchaseHandler purchaseHandler = new PurchaseHandler(userService,itemService, orderService);
                             response = purchaseHandler.handle(request,user_logged);
+                            break;
+                        case "GET_REPORT":
+                            ReportHandler repHandler = new ReportHandler(reportService, request);
+                            response = repHandler.handle();
+                            break;
+                        case "VIEW_ACCOUNT":
+                            ViewAccountHandler viewHandler = new ViewAccountHandler(userService, itemService);
+                            response = viewHandler.handle(request);
+                            break;
+                        case "EDIT_ITEM":
+                            EditItemHandler editHandler = new EditItemHandler(userService, itemService);
+                            response = editHandler.handle(request);
+                            break;
+                        case "SEARCH_ITEMS":
+                            SearchItemsHandler searchHandler = new SearchItemsHandler(itemService, conNorth, conSouth);
+                            response = searchHandler.handle(request);
+                            break;
+                        case "MANAGE_INVENTORY":
+                            ManageInventoryHandler inventoryHandler = new ManageInventoryHandler(userService, itemService);
+                            response = inventoryHandler.handle(request);
                             break;
                         case "EXIT":
                             isRunning = false;

@@ -17,6 +17,14 @@ public class UserInventory {
         this.region = region;
     }
 
+    public UserInventory(String userId, String itemId, String state, LocalDateTime dateCreated, String region) {
+        this.userId = userId;
+        this.itemId = itemId;
+        this.state = state;
+        this.dateCreated = dateCreated;
+        this.region = region;
+    }
+
     public String getUserId() {
         return userId;
     }
