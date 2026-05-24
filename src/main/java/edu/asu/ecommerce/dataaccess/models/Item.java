@@ -3,7 +3,7 @@ package edu.asu.ecommerce.dataaccess.models;
 import java.util.UUID;
 
 public class Item {
-    private final String id = UUID.randomUUID().toString();
+    private final String id;
     private String itemName;
     private String description;
     private double price;
@@ -12,6 +12,17 @@ public class Item {
     private int brandId;
 
     public Item(String itemName, String description, double price, int quantity, int categoryId, int brandId) {
+        this.id = UUID.randomUUID().toString();
+        this.itemName = itemName;
+        this.description = description;
+        this.price = price;
+        this.quantity = quantity;
+        this.categoryId = categoryId;
+        this.brandId = brandId;
+    }
+
+    public Item(String id, String itemName, String description, double price, int quantity, int categoryId, int brandId) {
+        this.id = id;
         this.itemName = itemName;
         this.description = description;
         this.price = price;

@@ -13,6 +13,7 @@
     import com.google.gson.JsonObject;
     import com.google.gson.JsonParser;
     import edu.asu.ecommerce.services.AuthenticationService;
+    import edu.asu.ecommerce.services.ReportService;
     import edu.asu.ecommerce.socket.handlers.*;
 
 
@@ -65,6 +66,7 @@
                 
                 //----SERVICES----
                 AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth); //Sayebha using centralized db for now
+                ReportService reportService = new ReportService(conSecure, conGlobal, conNorth, conSouth);
                 //Add other services here, using the connection they need.
 
                 
@@ -84,6 +86,10 @@
                         case "LOGIN":
                             LoginHandler logHandler = new LoginHandler(authService, request);
                             response = logHandler.handle();
+                            break;
+                        case "GET_REPORT":
+                            ReportHandler repHandler = new ReportHandler(reportService, request);
+                            response = repHandler.handle();
                             break;
                         case "EXIT":
                             isRunning = false;

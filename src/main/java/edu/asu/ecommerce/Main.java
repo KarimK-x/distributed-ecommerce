@@ -34,10 +34,11 @@ public class Main {
 
         runLogin(c1, "karim@gmail.com", "3333", "karim");
 
-        sendExit(c1, "karim");
-        sendExit(c2, "bebo");
+        // sendExit(c1, "karim");
+        // sendExit(c2, "bebo");
         runRestDepositTest();
-        runRestAddItemTest("karim@gmail.com");
+        runRestAddItemTest("bebo@gmail.com");
+        runReportTest(c2, "bebo@gmail.com");
     }
     
     public static void runRegistration(Client c, String username, String password, String email, String region){
@@ -115,5 +116,18 @@ public class Main {
         System.out.println("REST /items status: " + response.statusCode());
         System.out.println("REST /items body: " + response.body());
     }
+
+    public static void runReportTest(Client c, String email) {
+    try {
+        JsonObject req = new JsonObject();
+        req.addProperty("action", "GET_REPORT");
+        req.addProperty("email", email);
+
+        c.sendRequest(req);
+        System.out.println("REPORT response: " + c.receiveResponse());
+    } catch (IOException e) {
+        System.out.println("Report Error: " + e);
+    }
+}
     
 }
