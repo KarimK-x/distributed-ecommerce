@@ -114,6 +114,13 @@ public class Main {
             System.out.println("\n=== [" + sellerUsername + "] Socket: SEARCH_ITEMS (after edit) ===");
             runSocketSearch(sellerClient, "Gaming", null);
 
+            System.out.println("\n=== [" + sellerUsername + "] Socket: BULK_UPLOAD_ITEMS ===");
+            String bulkCsv = "itemName,description,price,quantity,categoryId,brandId,email\n"
+                    + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + sellerEmail + "\n"
+                    + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + sellerEmail + "\n"
+                    + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + sellerEmail;
+            runBulkUploadItems(sellerClient, bulkCsv);
+
             sendExit(sellerClient, sellerUsername);
             sendExit(buyerClient, buyerUsername);
         } catch (Exception e) {
@@ -365,6 +372,27 @@ public class Main {
             System.out.println("REPORT response: " + c.receiveResponse());
         } catch (IOException e) {
             System.out.println("Report Error: " + e);
+        }
+    }
+
+    /**
+     * Sends a BULK_UPLOAD_ITEMS socket action with CSV content embedded in the JSON payload.
+     *
+     * Example csvContent:
+     *   "itemName,description,price,quantity,categoryId,brandId,email\n
+     *    Gaming Laptop,Fast laptop,999.99,5,1,1,seller@email.com"
+     */
+    public static void runBulkUploadItems(Client c, String csvContent) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "BULK_UPLOAD_ITEMS");
+            req.addProperty("csvContent", csvContent);
+
+            System.out.println("Sending BULK_UPLOAD_ITEMS...");
+            c.sendRequest(req);
+            System.out.println("BULK_UPLOAD_ITEMS response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("BULK_UPLOAD_ITEMS error: " + e);
         }
     }
 }

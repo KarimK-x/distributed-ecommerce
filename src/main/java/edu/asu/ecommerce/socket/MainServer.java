@@ -123,6 +123,10 @@
                             ManageInventoryHandler inventoryHandler = new ManageInventoryHandler(userService, itemService);
                             response = inventoryHandler.handle(request);
                             break;
+                        case "BULK_UPLOAD_ITEMS":
+                            BulkUploadItemsHandler bulkHandler = new BulkUploadItemsHandler(authService, itemService, userService);
+                            response = bulkHandler.handle(request);
+                            break;
                         case "EXIT":
                             isRunning = false;
                             response.addProperty("status", "OK");
