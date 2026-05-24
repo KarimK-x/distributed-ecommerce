@@ -9,6 +9,14 @@ public class UserInventory {
     private final LocalDateTime dateCreated;
     private final String region;
 
+    public UserInventory(String userId, String itemId, String state, String region) {
+        this.userId = userId;
+        this.itemId = itemId;
+        this.state = state;
+        this.dateCreated = LocalDateTime.now();
+        this.region = region;
+    }
+
     public UserInventory(String userId, String itemId, String state, LocalDateTime dateCreated, String region) {
         this.userId = userId;
         this.itemId = itemId;

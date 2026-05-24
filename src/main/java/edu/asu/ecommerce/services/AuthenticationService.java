@@ -28,7 +28,7 @@ public class AuthenticationService {
     }
 
     private Profile_DAO getProfileDao(String region) {
-        if (region != null && region.equalsIgnoreCase("south")) {
+        if (region.equalsIgnoreCase("south")) {
             return this.profileDaoSouth;
         }
         return this.profileDaoNorth;
@@ -82,7 +82,7 @@ public class AuthenticationService {
 
     public boolean isExist(String email) throws SQLException {
         
-        return userInfoDao.getUserByEmail(email) != null; //leh mkontsh 3amelha kda?
+        return userInfoDao.getUserByEmail(email) != null;
     }
 
     public boolean authenticate(String email, String password) throws SQLException {

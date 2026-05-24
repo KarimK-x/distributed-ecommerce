@@ -36,6 +36,27 @@ public class Category_DAO {
         return insertCategory(new Category(categoryName));
     }
 
+    public Integer getCategoryIdByName(String categoryName) throws SQLException {
+        String sql = "SELECT categoryID FROM Category WHERE categoryName = ?";
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, categoryName);
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("categoryID");
+                }
+            }
+        }
+        return null;
+    }
+
+    public int findOrCreateCategory(String categoryName) throws SQLException {
+        Integer existingId = getCategoryIdByName(categoryName);
+        if (existingId != null) {
+            return existingId;
+        }
+        return insertCategory(categoryName);
+    }
+
     private int getNextCategoryId() throws SQLException {
         String sql = "SELECT COALESCE(MAX(categoryID), 0) + 1 AS nextId FROM Category";
         try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(sql)) {
