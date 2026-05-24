@@ -80,6 +80,10 @@ public class Main {
                 }
                 System.out.println("[" + TEST_USERNAME + "] Logged in userId: " + sellerId);
 
+                // ---> NEW: Test the ADD_STORE socket action <---
+                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: ADD_STORE ===");
+                runSocketAddStore(sellerClient, TEST_USERNAME, TEST_EMAIL, "Ziad Mega Electronics");
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: add item (purchase) ===");
                 String purchasedItemId = runRestAddItem(TEST_EMAIL, "Gaming Laptop", 10);
                 System.out.println("[" + TEST_USERNAME + "] Created itemId (purchase): " + purchasedItemId);
@@ -579,5 +583,25 @@ public class Main {
             }
         }
         System.out.println("External Store test data ready: apiKey=" + TEST_STORE_API_KEY);
+    }
+    public static void runSocketAddStore(Client c, String username, String email, String storeName) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "ADD_STORE");
+            req.addProperty("email", email);
+            req.addProperty("storeName", storeName);
+
+            System.out.println("[User " + username + "]: Sending ADD_STORE for " + storeName + "...");
+            c.sendRequest(req);
+            String responseStr = c.receiveResponse();
+            System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
+
+            JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
+            if (!"OK".equals(response.get("status").getAsString())) {
+                System.out.println("[WARNING] Add store failed: " + responseStr);
+            }
+        } catch (IOException e) {
+            System.out.println("ADD_STORE error: " + e);
+        }
     }
 }

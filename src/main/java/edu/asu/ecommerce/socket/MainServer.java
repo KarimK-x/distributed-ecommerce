@@ -13,12 +13,8 @@
     import com.google.gson.JsonObject;
     import com.google.gson.JsonParser;
     import edu.asu.ecommerce.dataaccess.models.Item;
-    import edu.asu.ecommerce.services.AuthenticationService;
-    import edu.asu.ecommerce.services.ReportService;
+    import edu.asu.ecommerce.services.*;
     import edu.asu.ecommerce.services.ItemService;
-    import edu.asu.ecommerce.services.UserService;
-    import edu.asu.ecommerce.services.ItemService;
-    import edu.asu.ecommerce.services.OrderService;
     import edu.asu.ecommerce.services.UserService;
     import edu.asu.ecommerce.socket.handlers.*;
 
@@ -75,6 +71,7 @@
                 ItemService itemService = new ItemService(conGlobal);
                 OrderService orderService = new OrderService(conSecure);
                 UserService userService = new UserService(conSecure,conNorth,conSouth);
+                ExternalStoreService externalStoreService = new ExternalStoreService(conNorth,conSouth);
 
                 String user_logged = null;
 
@@ -139,11 +136,16 @@
                             BulkUploadItemsHandler bulkHandler = new BulkUploadItemsHandler(authService, itemService, userService);
                             response = bulkHandler.handle(request);
                             break;
+                        case "ADD_STORE":
+                            ExternalStoreHandler externalStoreHandler = new ExternalStoreHandler(externalStoreService,authService);
+                            response = externalStoreHandler.handle(request);
+                            break;
                         case "EXIT":
                             isRunning = false;
                             response.addProperty("status", "OK");
                             response.addProperty("message", "Connection closing. Goodbye!");
                             break;
+
                         default:
                             response.addProperty("status", "ERR");
                             response.addProperty("code", "400");
