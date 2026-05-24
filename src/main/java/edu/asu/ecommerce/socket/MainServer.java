@@ -115,6 +115,18 @@
                             EditItemHandler editHandler = new EditItemHandler(userService, itemService);
                             response = editHandler.handle(request);
                             break;
+                        case "ADD_ITEM":
+                            AddItemHandler addHandler = new AddItemHandler(authService, itemService, userService);
+                            response = addHandler.handle(request);
+                            break;
+                        case "DEPOSIT":
+                            DepositHandler depositHandler = new DepositHandler(userService, authService);
+                            response = depositHandler.handle(request);
+                            break;
+                        case "DELETE_ITEM":
+                            DeleteItemHandler deleteHandler = new DeleteItemHandler(authService, itemService, conNorth, conSouth);
+                            response = deleteHandler.handle(request);
+                            break;
                         case "SEARCH_ITEMS":
                             SearchItemsHandler searchHandler = new SearchItemsHandler(itemService, conNorth, conSouth);
                             response = searchHandler.handle(request);

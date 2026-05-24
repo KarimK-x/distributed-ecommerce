@@ -23,7 +23,7 @@ public class ReportHandler {
             response = new JsonObject();
             response.addProperty("status", "ERR");
             response.addProperty("code", "777");
-            response.addProperty("message", "SQL ERROR");
+            response.addProperty("message", se.getMessage());
         } catch (Exception e) {
             response = new JsonObject();
             response.addProperty("status", "ERR");
