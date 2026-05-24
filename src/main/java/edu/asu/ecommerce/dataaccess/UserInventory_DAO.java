@@ -71,4 +71,18 @@ public class UserInventory_DAO {
         }
         return 0;
     }
+
+    public List<String> getItemIdsByState(String state) throws SQLException {
+        String sql = "SELECT itemID FROM UserInventory WHERE state = ?";
+        List<String> results = new ArrayList<>();
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, state);
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    results.add(rs.getString("itemID"));
+                }
+            }
+        }
+        return results;
+    }
 }

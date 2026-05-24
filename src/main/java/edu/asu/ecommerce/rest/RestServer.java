@@ -4,18 +4,28 @@
  */
 package edu.asu.ecommerce.rest;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import edu.asu.ecommerce.dataaccess.Item_DAO;
+import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
+import edu.asu.ecommerce.dataaccess.models.ExternalStoreInfo;
+import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.User;
+import edu.asu.ecommerce.services.AuthenticationService;
+import edu.asu.ecommerce.services.ExternalStoreService;
 import edu.asu.ecommerce.services.ItemService;
 import edu.asu.ecommerce.services.UserService;
-import edu.asu.ecommerce.services.AuthenticationService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -48,6 +58,14 @@ public class RestServer {
 		app.post("/deposit", ctx -> {
             implementDeposit(ctx);
         });
+
+		app.post("/external-stores/register", ctx -> {
+			implementExternalStoreRegister(ctx);
+		});
+
+		app.get("/external-stores/items", ctx -> {
+			implementExternalStoreItems(ctx);
+		});
 	}
 
 	private static JsonObject parseJson(Context ctx) {
@@ -197,4 +215,96 @@ public class RestServer {
 				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
 			}
     }
+
+	private static void implementExternalStoreRegister(Context ctx) {
+		JsonObject request = parseJson(ctx);
+		if (request == null) {
+			ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+			return;
+		}
+
+		String ownerEmail = getString(request, "ownerEmail");
+		String storeName = getString(request, "storeName");
+		String apiEndpoint = getString(request, "apiEndpoint");
+
+		if (ownerEmail == null || ownerEmail.isBlank() || storeName == null || storeName.isBlank()
+				|| apiEndpoint == null || apiEndpoint.isBlank()) {
+			ctx.status(400).result(errorResponse("400", "Missing required fields").toString());
+			return;
+		}
+
+		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+			AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+			User owner = authService.getUserByEmail(ownerEmail);
+			if (owner == null) {
+				ctx.status(404).result(errorResponse("404", "Owner not found").toString());
+				return;
+			}
+
+			ExternalStoreService storeService = new ExternalStoreService(conNorth, conSouth);
+			ExternalStoreInfo store = storeService.createStore(owner.getId(), storeName, apiEndpoint);
+
+			JsonObject response = new JsonObject();
+			response.addProperty("status", "OK");
+			response.addProperty("storeId", store.getStoreId());
+			response.addProperty("apiKey", store.getApiKey());
+			ctx.result(response.toString());
+		} catch (SQLException se) {
+			ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+		} catch (Exception e) {
+			ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+		}
+	}
+
+	private static void implementExternalStoreItems(Context ctx) {
+		String apiKey = ctx.header("X-API-KEY");
+		if (apiKey == null || apiKey.isBlank()) {
+			ctx.status(401).result(errorResponse("401", "Missing API key").toString());
+			return;
+		}
+
+		try (Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+			ExternalStoreService storeService = new ExternalStoreService(conNorth, conSouth);
+			ExternalStoreInfo store = storeService.getStoreByApiKey(apiKey);
+			if (store == null) {
+				ctx.status(401).result(errorResponse("401", "Invalid API key").toString());
+				return;
+			}
+
+			UserInventory_DAO inventoryDaoNorth = new UserInventory_DAO(conNorth);
+			UserInventory_DAO inventoryDaoSouth = new UserInventory_DAO(conSouth);
+			Set<String> itemIds = new HashSet<>();
+			itemIds.addAll(inventoryDaoNorth.getItemIdsByState("Available"));
+			itemIds.addAll(inventoryDaoSouth.getItemIdsByState("Available"));
+
+			Item_DAO itemDao = new Item_DAO(conGlobal);
+			List<Item> items = itemDao.getItemsByIds(new ArrayList<>(itemIds));
+
+			JsonArray itemsArray = new JsonArray();
+			for (Item item : items) {
+				JsonObject obj = new JsonObject();
+				obj.addProperty("itemId", item.getId());
+				obj.addProperty("itemName", item.getItemName());
+				obj.addProperty("description", item.getDescription());
+				obj.addProperty("price", item.getPrice());
+				obj.addProperty("quantity", item.getQuantity());
+				obj.addProperty("categoryId", item.getCategoryId());
+				obj.addProperty("brandId", item.getBrandId());
+				itemsArray.add(obj);
+			}
+
+			JsonObject response = new JsonObject();
+			response.addProperty("status", "OK");
+			response.add("items", itemsArray);
+			ctx.result(response.toString());
+		} catch (SQLException se) {
+			ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+		}
+	}
 }

@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Item_DAO {
     private final Connection con;
@@ -55,5 +57,42 @@ public class Item_DAO {
             }
         }
         return null;
+    }
+
+    public List<Item> getItemsByIds(List<String> itemIds) throws SQLException {
+        List<Item> results = new ArrayList<>();
+        if (itemIds == null || itemIds.isEmpty()) {
+            return results;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT itemID, itemName, description, price, quantity, categoryID, brandID FROM Item WHERE itemID IN (");
+        for (int i = 0; i < itemIds.size(); i++) {
+            sql.append("?");
+            if (i < itemIds.size() - 1) {
+                sql.append(",");
+            }
+        }
+        sql.append(")");
+
+        try (PreparedStatement pst = con.prepareStatement(sql.toString())) {
+            for (int i = 0; i < itemIds.size(); i++) {
+                pst.setString(i + 1, itemIds.get(i));
+            }
+            try (ResultSet rs = pst.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new Item(
+                            rs.getString("itemID"),
+                            rs.getString("itemName"),
+                            rs.getString("description"),
+                            rs.getDouble("price"),
+                            rs.getInt("quantity"),
+                            rs.getInt("categoryID"),
+                            rs.getInt("brandID")
+                    ));
+                }
+            }
+        }
+
+        return results;
     }
 }

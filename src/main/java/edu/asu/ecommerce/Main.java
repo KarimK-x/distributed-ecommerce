@@ -38,6 +38,10 @@ public class Main {
         // sendExit(c2, "bebo");
         runRestDepositTest();
         runRestAddItemTest("bebo@gmail.com");
+        String apiKey = runRestExternalStoreRegisterTest("karim@gmail.com");
+        if (apiKey != null && !apiKey.isBlank()) {
+            runRestExternalStoreItemsTest(apiKey);
+        }
         runReportTest(c2, "bebo@gmail.com");
     }
     
@@ -115,6 +119,50 @@ public class Main {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST /items status: " + response.statusCode());
         System.out.println("REST /items body: " + response.body());
+    }
+
+    public static String runRestExternalStoreRegisterTest(String ownerEmail) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        String json = "{\"ownerEmail\":\"" + ownerEmail + "\",\"storeName\":\"KarimStore\",\"apiEndpoint\":\"https://example.com\"}";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/external-stores/register"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST /external-stores/register status: " + response.statusCode());
+        System.out.println("REST /external-stores/register body: " + response.body());
+
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            return null;
+        }
+
+        try {
+            JsonObject obj = JsonParser.parseString(response.body()).getAsJsonObject();
+            if (obj.has("apiKey") && !obj.get("apiKey").isJsonNull()) {
+                return obj.get("apiKey").getAsString();
+            }
+        } catch (Exception e) {
+            System.out.println("REST /external-stores/register parse error: " + e.getMessage());
+        }
+
+        return null;
+    }
+
+    public static void runRestExternalStoreItemsTest(String apiKey) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/external-stores/items"))
+                .header("X-API-KEY", apiKey)
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST /external-stores/items status: " + response.statusCode());
+        System.out.println("REST /external-stores/items body: " + response.body());
     }
 
     public static void runReportTest(Client c, String email) {
