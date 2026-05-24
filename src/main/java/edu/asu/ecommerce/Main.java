@@ -20,20 +20,22 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 public class Main {
-    private static final String TEST_EMAIL = "ziad@gmail.com";
-    private static final String TEST_PASSWORD = "1111";
+    private static final String TEST_EMAIL = "mabanoub427@gmail.com";
+    private static final String TEST_PASSWORD = "cfvjkgbiikemcuer";
     private static final String TEST_USERNAME = "ziad";
-    private static final String TEST_EMAIL_2 = "bebo@gmail.com";
-    private static final String TEST_PASSWORD_2 = "1234";
+    private static final String TEST_EMAIL_2 = "mabanoub427@gmail.com";
+    private static final String TEST_PASSWORD_2 = "cfvjkgbiikemcuer";
     private static final String TEST_USERNAME_2 = "bebo";
     private static final String TEST_REGION_1 = "North";
     private static final String TEST_REGION_2 = "North";
     private static final String DB_BASE_URL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
     private static final String DB_USER = "sa";
     private static final String DB_PASS = "123456";
+    private static final Scanner scanner = new Scanner(System.in);
 
     private static final String TEST_STORE_EMAIL = "partner@megastore.com";
     private static final String TEST_STORE_API_KEY = "sk_test_12345ABCDE";
@@ -67,92 +69,92 @@ public class Main {
         CompletableFuture<Void> purchaseCompletedFuture = new CompletableFuture<>();
 
         // THREAD 1 THE SELLER
-        Thread sellerThread = new Thread(() -> {
-            try {
-                System.out.println("=== [" + TEST_USERNAME + "] Setup: register & login ===");
-                runRegistration(sellerClient, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, TEST_REGION_1);
-                String sellerId = runLogin(sellerClient, TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME);
-
-                if (sellerId == null) {
-                    System.out.println("[" + TEST_USERNAME + "] Login failed; stopping tests.");
-                    publishedItemFuture.completeExceptionally(new RuntimeException("Seller login failed"));
-                    sendExit(sellerClient, TEST_USERNAME);
-                    return;
-                }
-                System.out.println("[" + TEST_USERNAME + "] Logged in userId: " + sellerId);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: ADD_STORE ==="); runSocketAddStore(sellerClient, TEST_USERNAME, TEST_EMAIL, "Ziad Mega Electronics");
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] REST: add item (purchase) ===");
-                String purchasedItemId = runRestAddItem(TEST_EMAIL, "Gaming Laptop", 10);
-                System.out.println("[" + TEST_USERNAME + "] Created itemId (purchase): " + purchasedItemId);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: add item (available) ===");
-                String availableItemId = runSocketAddItem(sellerClient, TEST_USERNAME, TEST_EMAIL, "Office Laptop", 12);
-                System.out.println("[" + TEST_USERNAME + "] Created itemId (available): " + availableItemId);
-
-                publishedItemFuture.complete(purchasedItemId);
-
-                System.out.println("[" + TEST_USERNAME + "] Waiting for buyer to complete transaction...");
-                purchaseCompletedFuture.join();
-                System.out.println("[" + TEST_USERNAME + "] Transaction verified. Resuming checks...");
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: MANAGE_INVENTORY ===");
-                runManageInventory(sellerClient, sellerId);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS ===");
-                runSocketSearch(sellerClient, null, "Dell");
-
-                System.out.println("\n=== [EXTERNAL STORE] Integration Test ===");
-                String externalItemId = runRestAddItem(TEST_EMAIL, "Partner Exclusive Headset", 85.00);
-                System.out.println("[EXTERNAL STORE] Target Item Created: " + externalItemId);
-
-                runRestExternalPurchase(TEST_STORE_API_KEY, externalItemId);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] REST: search items ===");
-                runRestSearch(null, "Dell");
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: EDIT_ITEM ===");
-                runEditItem(sellerClient, TEST_EMAIL, availableItemId, "Office Laptop Pro", "Updated description", 60, 1);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] REST: edit item ===");
-                runRestEditItem(availableItemId, TEST_EMAIL, "Office Laptop Pro REST", "Updated via REST", 60, 1);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] REST: delete item ===");
-                runRestDeleteItem(availableItemId, TEST_EMAIL);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: delete item ===");
-
-                // Note: This is meant to fail y3ny to show deleting item that is sold is not an option
-                try {
-                    runSocketDeleteItem(sellerClient, TEST_USERNAME, purchasedItemId, TEST_EMAIL);
-                } catch (RuntimeException ignored) { /* rejection already printed */ }
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: VIEW_ACCOUNT ===");
-                runViewAccount(sellerClient, TEST_EMAIL);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: BULK_UPLOAD_ITEMS ===");
-                String bulkCsv = "itemName,description,price,quantity,categoryId,brandId,email\n"
-                        + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
-                        + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
-                        + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL;
-                runBulkUploadItems(sellerClient, bulkCsv);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: GET_REPORT ===");
-                runReportTest(sellerClient, TEST_EMAIL);
-
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS (after edit) ===");
-                runSocketSearch(sellerClient, "Gaming", null);
-
-                sendExit(sellerClient, TEST_USERNAME);
-
-            } catch (Exception e) {
-                System.out.println("[" + TEST_USERNAME + "] Demo flow error:");
-                e.printStackTrace();
-                publishedItemFuture.completeExceptionally(e);
-                sendExit(sellerClient, TEST_USERNAME);
-            }
-        });
+//        Thread sellerThread = new Thread(() -> {
+//            try {
+//                System.out.println("=== [" + TEST_USERNAME + "] Setup: register & login ===");
+//                runRegistration(sellerClient, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, TEST_REGION_1);
+//                String sellerId = runLogin(sellerClient, TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME);
+//
+//                if (sellerId == null) {
+//                    System.out.println("[" + TEST_USERNAME + "] Login failed; stopping tests.");
+//                    publishedItemFuture.completeExceptionally(new RuntimeException("Seller login failed"));
+//                    sendExit(sellerClient, TEST_USERNAME);
+//                    return;
+//                }
+//                System.out.println("[" + TEST_USERNAME + "] Logged in userId: " + sellerId);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: ADD_STORE ==="); runSocketAddStore(sellerClient, TEST_USERNAME, TEST_EMAIL, "Ziad Mega Electronics");
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] REST: add item (purchase) ===");
+//                String purchasedItemId = runRestAddItem(TEST_EMAIL, "Gaming Laptop", 10);
+//                System.out.println("[" + TEST_USERNAME + "] Created itemId (purchase): " + purchasedItemId);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: add item (available) ===");
+//                String availableItemId = runSocketAddItem(sellerClient, TEST_USERNAME, TEST_EMAIL, "Office Laptop", 12);
+//                System.out.println("[" + TEST_USERNAME + "] Created itemId (available): " + availableItemId);
+//
+//                publishedItemFuture.complete(purchasedItemId);
+//
+//                System.out.println("[" + TEST_USERNAME + "] Waiting for buyer to complete transaction...");
+//                purchaseCompletedFuture.join();
+//                System.out.println("[" + TEST_USERNAME + "] Transaction verified. Resuming checks...");
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: MANAGE_INVENTORY ===");
+//                runManageInventory(sellerClient, sellerId);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS ===");
+//                runSocketSearch(sellerClient, null, "Dell");
+//
+//                System.out.println("\n=== [EXTERNAL STORE] Integration Test ===");
+//                String externalItemId = runRestAddItem(TEST_EMAIL, "Partner Exclusive Headset", 85.00);
+//                System.out.println("[EXTERNAL STORE] Target Item Created: " + externalItemId);
+//
+//                runRestExternalPurchase(TEST_STORE_API_KEY, externalItemId);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] REST: search items ===");
+//                runRestSearch(null, "Dell");
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: EDIT_ITEM ===");
+//                runEditItem(sellerClient, TEST_EMAIL, availableItemId, "Office Laptop Pro", "Updated description", 60, 1);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] REST: edit item ===");
+//                runRestEditItem(availableItemId, TEST_EMAIL, "Office Laptop Pro REST", "Updated via REST", 60, 1);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] REST: delete item ===");
+//                runRestDeleteItem(availableItemId, TEST_EMAIL);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: delete item ===");
+//
+//                // Note: This is meant to fail y3ny to show deleting item that is sold is not an option
+//                try {
+//                    runSocketDeleteItem(sellerClient, TEST_USERNAME, purchasedItemId, TEST_EMAIL);
+//                } catch (RuntimeException ignored) { /* rejection already printed */ }
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: VIEW_ACCOUNT ===");
+//                runViewAccount(sellerClient, TEST_EMAIL);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: BULK_UPLOAD_ITEMS ===");
+//                String bulkCsv = "itemName,description,price,quantity,categoryId,brandId,email\n"
+//                        + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+//                        + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+//                        + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL;
+//                runBulkUploadItems(sellerClient, bulkCsv);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: GET_REPORT ===");
+//                runReportTest(sellerClient, TEST_EMAIL);
+//
+//                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS (after edit) ===");
+//                runSocketSearch(sellerClient, "Gaming", null);
+//
+//                sendExit(sellerClient, TEST_USERNAME);
+//
+//            } catch (Exception e) {
+//                System.out.println("[" + TEST_USERNAME + "] Demo flow error:");
+//                e.printStackTrace();
+//                publishedItemFuture.completeExceptionally(e);
+//                sendExit(sellerClient, TEST_USERNAME);
+//            }
+//        });
 
         // THREAD 2 THE BUYER
 
@@ -198,10 +200,10 @@ public class Main {
             }
         });
 
-        sellerThread.start();
+        //sellerThread.start();
         buyerThread.start();
 
-        sellerThread.join();
+        //sellerThread.join();
         buyerThread.join();
 
         System.out.println("Demo complete.");
@@ -226,24 +228,51 @@ public class Main {
 
     public static String runLogin(Client c, String email, String password, String username) {
         try {
+            // STEP 1: Send Credentials
             JsonObject loginReq = new JsonObject();
             loginReq.addProperty("action", "LOGIN");
             loginReq.addProperty("email", email);
             loginReq.addProperty("password", password);
 
-            System.out.println("[User " + username + "]: Sending LOGIN...");
+            System.out.println("[User " + username + "]: Sending LOGIN credentials...");
             c.sendRequest(loginReq);
             String responseStr = c.receiveResponse();
             System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
 
             JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
-            if ("OK".equals(response.get("status").getAsString()) && response.has("userId")) {
-                return response.get("userId").getAsString();
+
+            if ("PENDING_OTP".equals(response.get("status").getAsString())) {
+                System.out.println("[User " + username + "]: Waiting for OTP...");
+
+                String otpCode = getOtpFromConsole(username, email);
+                JsonObject verifyReq = new JsonObject();
+                verifyReq.addProperty("action", "VERIFY_LOGIN");
+                verifyReq.addProperty("email", email);
+                verifyReq.addProperty("otpCode", otpCode);
+
+
+                System.out.println("[User " + username + "]: Sending VERIFY_LOGIN with code: " + otpCode);
+                c.sendRequest(verifyReq);
+                String verifyResponseStr = c.receiveResponse();
+                System.out.println("[User " + username + "]:\n" + formatJson(verifyResponseStr));
+
+                JsonObject verifyResponse = JsonParser.parseString(verifyResponseStr).getAsJsonObject();
+                if ("OK".equals(verifyResponse.get("status").getAsString()) && verifyResponse.has("userId")) {
+                    return verifyResponse.get("userId").getAsString();
+                }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Login error: " + e);
         }
         return null;
+    }
+
+    private static synchronized String getOtpFromConsole(String username, String email) {
+        System.out.println("\n=======================================================");
+        System.out.print(">>> [" + username + "] Check your email (" + email + ") for the OTP.\n>>> Enter 6-digit code: ");
+        String code = scanner.nextLine().trim();
+        System.out.println("=======================================================\n");
+        return code;
     }
 
     public static void runViewAccount(Client c, String email) {

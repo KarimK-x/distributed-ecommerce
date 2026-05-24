@@ -7,6 +7,8 @@ import edu.asu.ecommerce.dataaccess.Profile_DAO;
 import edu.asu.ecommerce.dataaccess.models.User_Info;
 
 import java.sql.*;
+import java.time.LocalDateTime;
+import java.util.Random;
 
 public class AuthenticationService {
     private Connection conSecure;
@@ -96,6 +98,56 @@ public class AuthenticationService {
         }
 
         return password.equals(info.getPassword());
+    }
+
+    public String generateAndSaveOTP(String email) throws SQLException {
+        Random rnd = new Random();
+        int number = rnd.nextInt(999999);
+        String otp = String.format("%06d", number);
+
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+
+        String sql = "MERGE INTO OTP_Tokens AS target " +
+                "USING (SELECT ? AS email) AS source " +
+                "ON target.email = source.email " +
+                "WHEN MATCHED THEN UPDATE SET otpCode = ?, expiresAt = ? " +
+                "WHEN NOT MATCHED THEN INSERT (email, otpCode, expiresAt) VALUES (?, ?, ?);";
+
+        try (PreparedStatement pst = conSecure.prepareStatement(sql)) {
+            pst.setString(1, email);
+            pst.setString(2, otp);
+            pst.setTimestamp(3, Timestamp.valueOf(expiresAt));
+            pst.setString(4, email);
+            pst.setString(5, otp);
+            pst.setTimestamp(6, Timestamp.valueOf(expiresAt));
+            pst.executeUpdate();
+        }
+        return otp;
+    }
+
+    public boolean verifyOTP(String email, String providedOtp) throws SQLException {
+        String sql = "SELECT expiresAt FROM OTP_Tokens WHERE email = ? AND otpCode = ?";
+
+        try (PreparedStatement pst = conSecure.prepareStatement(sql)) {
+            pst.setString(1, email);
+            pst.setString(2, providedOtp);
+
+            try (ResultSet rs = pst.executeQuery()) {
+                if (rs.next()) {
+                    LocalDateTime expiresAt = rs.getTimestamp("expiresAt").toLocalDateTime();
+
+                    if (LocalDateTime.now().isBefore(expiresAt)) {
+                        String deleteSql = "DELETE FROM OTP_Tokens WHERE email = ?";
+                        try (PreparedStatement deletePst = conSecure.prepareStatement(deleteSql)) {
+                            deletePst.setString(1, email);
+                            deletePst.executeUpdate();
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return false; // OTP invalid or expired
     }
 
 }

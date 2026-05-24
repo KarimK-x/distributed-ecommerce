@@ -1,45 +1,45 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package edu.asu.ecommerce.socket.handlers;
 
 import com.google.gson.JsonObject;
 import edu.asu.ecommerce.services.AuthenticationService;
+import edu.asu.ecommerce.services.EmailService;
 
 import java.sql.SQLException;
 
-/**
- *
- * @author Dell
- */
 public class LoginHandler {
-    private JsonObject response = new JsonObject();
-    private AuthenticationService authService;
-    private JsonObject request;
+    private final AuthenticationService authService;
+    private final EmailService emailService;
+    private final JsonObject request;
 
-    public LoginHandler(AuthenticationService userService, JsonObject request){
-        this.authService = userService;
+    // Required: Inject the EmailService here
+    public LoginHandler(AuthenticationService authService, EmailService emailService, JsonObject request){
+        this.authService = authService;
+        this.emailService = emailService;
         this.request = request;
     }
 
     public JsonObject handle(){
+        JsonObject response = new JsonObject();
         String email = request.get("email").getAsString();
         String password = request.get("password").getAsString();
 
-        try{
+        try {
+            // 1. Verify standard credentials
             boolean isValid = authService.authenticate(email, password);
+
             if (isValid) {
-                response.addProperty("status", "OK");
-                response.addProperty("message", "Login successful");
-                String userId = authService.getUserByEmail(email).getId();
-                response.addProperty("userId", userId);
+                // 2. 2FA LOGIC: Generate code, email it, and tell client to wait
+                String otp = authService.generateAndSaveOTP(email);
+                emailService.sendLoginOtp(email, otp);
+
+                response.addProperty("status", "PENDING_OTP");
+                response.addProperty("message", "Credentials verified. Please enter the OTP sent to your email.");
+                // CRITICAL: Do NOT return the userId here! Let VerifyLoginHandler do it.
             } else {
                 response.addProperty("status", "ERR");
                 response.addProperty("code", "401");
                 response.addProperty("message", "Invalid email or password");
             }
-
         }
         catch(SQLException se){
             response.addProperty("status", "ERR");
@@ -51,6 +51,6 @@ public class LoginHandler {
             response.addProperty("message", e.getMessage());
         }
 
-        return this.response;
+        return response;
     }
 }

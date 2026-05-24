@@ -72,10 +72,11 @@
                 OrderService orderService = new OrderService(conSecure);
                 UserService userService = new UserService(conSecure,conNorth,conSouth);
                 ExternalStoreService externalStoreService = new ExternalStoreService(conNorth,conSouth);
+                ReportService reportService = new ReportService(conSecure, conGlobal, conNorth, conSouth);
 
+                EmailService emailService = new EmailService();
                 String user_logged = null;
 
-                ReportService reportService = new ReportService(conSecure, conGlobal, conNorth, conSouth);
 
                 
                 while(isRunning){
@@ -92,9 +93,16 @@
                             response = regHandler.handle(request);
                             break;
                         case "LOGIN":
-                            LoginHandler logHandler = new LoginHandler(authService, request);
+                            LoginHandler logHandler = new LoginHandler(authService, emailService, request);
                             response = logHandler.handle();
-                            user_logged = response.get("userId").getAsString();
+                            break;
+                        case "VERIFY_LOGIN":
+                            VerifyLoginHandler verifyHandler = new VerifyLoginHandler(authService);
+                            response = verifyHandler.handle(request);
+
+                            if (response.has("status") && "OK".equals(response.get("status").getAsString()) && response.has("userId")) {
+                                user_logged = response.get("userId").getAsString();
+                            }
                             break;
                         case "PURCHASE":
                             PurchaseHandler purchaseHandler = new PurchaseHandler(userService,itemService, orderService);
