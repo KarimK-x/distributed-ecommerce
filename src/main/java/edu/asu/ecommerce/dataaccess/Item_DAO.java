@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Item_DAO {
     private final Connection con;
@@ -15,7 +17,7 @@ public class Item_DAO {
     }
 
     public boolean insertItem(Item item) throws SQLException {
-        String sql = "INSERT INTO Item (itemID, itemName, description, price, quantity, categoryID, brandID) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Item (itemID, itemName, description, unitPrice, quantity, categoryID, brandID) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pst = con.prepareStatement(sql)) {
             pst.setString(1, item.getId());
             pst.setString(2, item.getItemName());
@@ -34,26 +36,5 @@ public class Item_DAO {
             pst.setString(1, itemId);
             return pst.executeUpdate() > 0;
         }
-    }
-
-    public Item getItemById(String itemId) throws SQLException {
-        String sql = "SELECT itemID, itemName, description, price, quantity, categoryID, brandID FROM Item WHERE itemID = ?";
-        try (PreparedStatement pst = con.prepareStatement(sql)) {
-            pst.setString(1, itemId);
-            try (ResultSet rs = pst.executeQuery()) {
-                if (rs.next()) {
-                    return new Item(
-                            rs.getString("itemID"),
-                            rs.getString("itemName"),
-                            rs.getString("description"),
-                            rs.getDouble("price"),
-                            rs.getInt("quantity"),
-                            rs.getInt("categoryID"),
-                            rs.getInt("brandID")
-                    );
-                }
-            }
-        }
-        return null;
     }
 }

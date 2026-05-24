@@ -47,6 +47,10 @@ public class Item {
         this.description = description;
     }
 
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
+
     public String getItemName() {
         return itemName;
     }
@@ -67,7 +71,15 @@ public class Item {
         return categoryId;
     }
 
+    public void setCategoryId(int categoryId) {
+        this.categoryId = categoryId;
+    }
+
     public int getBrandId() {
         return brandId;
+    }
+
+    public void setBrandId(int brandId) {
+        this.brandId = brandId;
     }
 }

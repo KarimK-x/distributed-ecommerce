@@ -7,14 +7,18 @@ package edu.asu.ecommerce.services;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import edu.asu.ecommerce.dataaccess.LedgerEntry_DAO;
 import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
 import edu.asu.ecommerce.dataaccess.UserInfo_DAO;
+import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.LedgerEntry;
 import edu.asu.ecommerce.dataaccess.models.UserInventory;
 import edu.asu.ecommerce.dataaccess.models.User_Info;
-
 public class UserService{
     private Connection conSecure;
     private Connection conNorth;
@@ -107,5 +111,112 @@ public class UserService{
         if (!inserted) {
             throw new SQLException("inventory insert failed");
         }
+    }
+
+    public Map<String, Object> getAccountInfo(String email, ItemService itemService) throws Exception {
+        if (email == null || email.isEmpty()) {
+            throw new Exception("email is required");
+        }
+
+        User_Info info = userInfoDao.getUserByEmail(email);
+        if (info == null) {
+            throw new Exception("user not found");
+        }
+
+        String region = getRegionFromUserId(info.getId());
+        List<UserInventory> entries = getInventoryDao(region).getInventoryByUserId(info.getId());
+
+        List<Map<String, Object>> available = new ArrayList<>();
+        List<Map<String, Object>> bought = new ArrayList<>();
+        List<Map<String, Object>> sold = new ArrayList<>();
+
+        for (UserInventory entry : entries) {
+            Item item = itemService.getItemById(entry.getItemId());
+            if (item == null) {
+                continue;
+            }
+            Map<String, Object> itemInfo = toItemMap(item, entry);
+            String state = entry.getState();
+            if ("Available".equalsIgnoreCase(state)) {
+                available.add(itemInfo);
+            } else if ("Bought".equalsIgnoreCase(state)) {
+                bought.add(itemInfo);
+            } else if ("Sold".equalsIgnoreCase(state)) {
+                sold.add(itemInfo);
+            }
+        }
+
+        Map<String, Object> accountInfo = new HashMap<>();
+        accountInfo.put("balance", info.getBalance());
+        accountInfo.put("available", available);
+        accountInfo.put("bought", bought);
+        accountInfo.put("sold", sold);
+        return accountInfo;
+    }
+
+    public void editAvailableItem(String email, String itemId, String itemName, String description,
+                                  double price, int quantity, int categoryId, int brandId,
+                                  ItemService itemService) throws Exception {
+        if (email == null || email.isEmpty()) {
+            throw new Exception("email is required");
+        }
+        if (itemId == null || itemId.isEmpty()) {
+            throw new Exception("itemId is required");
+        }
+
+        User_Info info = userInfoDao.getUserByEmail(email);
+        if (info == null) {
+            throw new Exception("user not found");
+        }
+
+        String region = getRegionFromUserId(info.getId());
+        boolean ownsAvailable = getInventoryDao(region).hasInventoryEntry(info.getId(), itemId, "Available");
+        if (!ownsAvailable) {
+            throw new Exception("item is not available for edit");
+        }
+
+        itemService.updateItem(itemId, itemName, description, price, quantity, categoryId, brandId);
+    }
+
+    public List<Map<String, Object>> getInventoryListing(String userId, ItemService itemService) throws Exception {
+        if (userId == null || userId.isEmpty()) {
+            throw new Exception("userId is required");
+        }
+
+        String region = getRegionFromUserId(userId);
+        List<UserInventory> entries = getInventoryDao(region).getInventoryByUserId(userId);
+        List<Map<String, Object>> listings = new ArrayList<>();
+
+        for (UserInventory entry : entries) {
+            Item item = itemService.getItemById(entry.getItemId());
+            if (item == null) {
+                continue;
+            }
+            Map<String, Object> itemInfo = new HashMap<>();
+            itemInfo.put("itemId", item.getId());
+            itemInfo.put("itemName", item.getItemName());
+            itemInfo.put("description", item.getDescription());
+            itemInfo.put("price", item.getPrice());
+            itemInfo.put("quantity", item.getQuantity());
+            itemInfo.put("categoryId", item.getCategoryId());
+            itemInfo.put("brandId", item.getBrandId());
+            itemInfo.put("dateCreated", entry.getDateCreated().toString());
+            listings.add(itemInfo);
+        }
+        return listings;
+    }
+
+    private Map<String, Object> toItemMap(Item item, UserInventory entry) {
+        Map<String, Object> itemInfo = new HashMap<>();
+        itemInfo.put("itemId", item.getId());
+        itemInfo.put("itemName", item.getItemName());
+        itemInfo.put("description", item.getDescription());
+        itemInfo.put("price", item.getPrice());
+        itemInfo.put("quantity", item.getQuantity());
+        itemInfo.put("categoryId", item.getCategoryId());
+        itemInfo.put("brandId", item.getBrandId());
+        itemInfo.put("state", entry.getState());
+        itemInfo.put("dateCreated", entry.getDateCreated().toString());
+        return itemInfo;
     }
 }

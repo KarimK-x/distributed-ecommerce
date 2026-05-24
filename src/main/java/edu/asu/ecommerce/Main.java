@@ -5,92 +5,268 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import edu.asu.ecommerce.client.Client;
+import edu.asu.ecommerce.dataaccess.Brand_DAO;
+import edu.asu.ecommerce.dataaccess.Category_DAO;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class Main {
+    private static final String TEST_EMAIL = "ziad@gmail.com";
+    private static final String TEST_PASSWORD = "1111";
+    private static final String TEST_USERNAME = "ziad";
+    private static final String TEST_EMAIL_2 = "bebo@gmail.com";
+    private static final String TEST_PASSWORD_2 = "1234";
+    private static final String TEST_USERNAME_2 = "bebo";
+    private static final String TEST_REGION_1 = "North";
+    private static final String TEST_REGION_2 = "South";
+    private static final String DB_BASE_URL = "jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true;";
+    private static final String DB_USER = "sa";
+    private static final String DB_PASS = "123456";
+
+    private static int testCategoryId;
+    private static int testBrandId;
+
     public static void main(String[] args) throws Exception {
-        
+        ensureTestCatalogData();
+
         Client c1 = new Client(new Socket("localhost", 1234));
         Client c2 = new Client(new Socket("localhost", 1234));
 
-        // --- USER 1 THREAD ---
-        Thread user1 = new Thread(() -> runRegistration(c1, "karim", "3333", "karim@gmail.com","North"));
+        Thread user1 = new Thread(() -> runDemoFlow(c1, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, TEST_REGION_1));
+        Thread user2 = new Thread(() -> runDemoFlow(c2, TEST_USERNAME_2, TEST_PASSWORD_2, TEST_EMAIL_2, TEST_REGION_2));
 
-
-        // --- USER 2 THREAD ---
-        Thread user2 = new Thread(() -> runRegistration(c2, "bebo", "1234", "bebo@gmail.com","South"));
-
-        
         user1.start();
         user2.start();
 
         user1.join();
         user2.join();
+    }
 
-        runLogin(c1, "karim@gmail.com", "3333", "karim");
+    private static void runDemoFlow(Client c, String username, String password, String email, String region) {
+        try {
+            System.out.println("=== [" + username + "] Setup: register & login ===");
+            runRegistration(c, username, password, email, region);
+            String userId = runLogin(c, email, password, username);
+            if (userId == null) {
+                System.out.println("[" + username + "] Login failed; stopping tests.");
+                sendExit(c, username);
+                return;
+            }
+            System.out.println("[" + username + "] Logged in userId: " + userId);
 
-        // sendExit(c1, "karim");
-        // sendExit(c2, "bebo");
-        runRestDepositTest();
-        runRestAddItemTest("bebo@gmail.com");
-        runReportTest(c2, "bebo@gmail.com");
+            System.out.println("\n=== [" + username + "] REST: deposit & add item ===");
+            runRestDepositTest(email, 100);
+            String itemId = runRestAddItemTest(email);
+            System.out.println("[" + username + "] Created itemId: " + itemId);
+
+            System.out.println("\n=== [" + username + "] Socket: MANAGE_INVENTORY ===");
+            runManageInventory(c, userId);
+
+            System.out.println("\n=== [" + username + "] Socket: SEARCH_ITEMS ===");
+            runSocketSearch(c, null, "Dell");
+
+            System.out.println("\n=== [" + username + "] REST: search items ===");
+            runRestSearch(null, "Dell");
+
+            System.out.println("\n=== [" + username + "] Socket: EDIT_ITEM ===");
+            runEditItem(c, email, itemId, "Gaming Laptop Pro", "Updated description", 1100, 1);
+
+            System.out.println("\n=== [" + username + "] REST: edit item ===");
+            runRestEditItem(itemId, email, "Gaming Laptop Pro REST", "Updated via REST", 1150, 1);
+
+            System.out.println("\n=== [" + username + "] Socket: VIEW_ACCOUNT ===");
+            runViewAccount(c, email);
+
+            System.out.println("\n=== [" + username + "] Socket: SEARCH_ITEMS (after edit) ===");
+            runSocketSearch(c, "Gaming", null);
+
+            sendExit(c, username);
+        } catch (Exception e) {
+            System.out.println("[" + username + "] Demo flow error: " + e.getMessage());
+            sendExit(c, username);
+        }
     }
     
     public static void runRegistration(Client c, String username, String password, String email, String region){
         try {
-                
-                JsonObject reqC1 = new JsonObject();
-                reqC1.addProperty("action", "REGISTER");
-                reqC1.addProperty("username", username);
-                reqC1.addProperty("password", password);
-                reqC1.addProperty("email", email);
-                reqC1.addProperty("region", region);
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "REGISTER");
+            req.addProperty("username", username);
+            req.addProperty("password", password);
+            req.addProperty("email", email);
+            req.addProperty("region", region);
 
-                System.out.println("[User " + username +"]: Sending request...");
-                c.sendRequest(reqC1);
-                System.out.println("[User " + username +"]: Server replied: " + c.receiveResponse());
-                
-            } catch (IOException e) {
-                System.out.println("User 1 Error: " + e);
-            }
+            System.out.println("[User " + username + "]: Sending REGISTER...");
+            c.sendRequest(req);
+            System.out.println("[User " + username + "]: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("Registration error: " + e);
+        }
     }
 
-    public static void runLogin(Client c, String email, String password, String username){
+    public static String runLogin(Client c, String email, String password, String username) {
         try {
             JsonObject loginReq = new JsonObject();
             loginReq.addProperty("action", "LOGIN");
             loginReq.addProperty("email", email);
             loginReq.addProperty("password", password);
 
-            System.out.println("[User " + username + "]: Sending login request...");
+            System.out.println("[User " + username + "]: Sending LOGIN...");
             c.sendRequest(loginReq);
-            System.out.println("[User " + username + "]: Server replied: " + c.receiveResponse());
+            String responseStr = c.receiveResponse();
+            System.out.println("[User " + username + "]: " + responseStr);
 
+            JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
+            if ("OK".equals(response.get("status").getAsString()) && response.has("userId")) {
+                return response.get("userId").getAsString();
+            }
         } catch (IOException e) {
-            System.out.println("Login Error: " + e);
+            System.out.println("Login error: " + e);
+        }
+        return null;
+    }
+
+    public static void runViewAccount(Client c, String email) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "VIEW_ACCOUNT");
+            req.addProperty("email", email);
+
+            System.out.println("Sending VIEW_ACCOUNT for " + email + "...");
+            c.sendRequest(req);
+            System.out.println("Response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("VIEW_ACCOUNT error: " + e);
         }
     }
 
-    public static void sendExit(Client c, String username){
+    public static void runManageInventory(Client c, String userId) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "MANAGE_INVENTORY");
+            req.addProperty("userId", userId);
+
+            System.out.println("Sending MANAGE_INVENTORY for userId " + userId + "...");
+            c.sendRequest(req);
+            System.out.println("Response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("MANAGE_INVENTORY error: " + e);
+        }
+    }
+
+    public static void runSocketSearch(Client c, String name, String brand) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "SEARCH_ITEMS");
+            if (name != null && !name.isBlank()) {
+                req.addProperty("name", name);
+            }
+            if (brand != null && !brand.isBlank()) {
+                req.addProperty("brand", brand);
+            }
+
+            System.out.println("Sending SEARCH_ITEMS...");
+            c.sendRequest(req);
+            System.out.println("Response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("SEARCH_ITEMS error: " + e);
+        }
+    }
+
+    public static void runEditItem(Client c, String email, String itemId, String itemName,
+                                   String description, double price, int quantity) {
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "EDIT_ITEM");
+            req.addProperty("email", email);
+            req.addProperty("itemId", itemId);
+            req.addProperty("itemName", itemName);
+            req.addProperty("description", description);
+            req.addProperty("price", price);
+            req.addProperty("quantity", quantity);
+            req.addProperty("categoryId", testCategoryId);
+            req.addProperty("brandId", testBrandId);
+
+            System.out.println("Sending EDIT_ITEM for itemId " + itemId + "...");
+            c.sendRequest(req);
+            System.out.println("Response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("EDIT_ITEM error: " + e);
+        }
+    }
+
+    public static void runRestSearch(String name, String brand) throws Exception {
+        StringBuilder uri = new StringBuilder("http://localhost:7000/items/search?");
+        boolean hasParam = false;
+        if (name != null && !name.isBlank()) {
+            uri.append("name=").append(URLEncoder.encode(name, StandardCharsets.UTF_8));
+            hasParam = true;
+        }
+        if (brand != null && !brand.isBlank()) {
+            if (hasParam) {
+                uri.append("&");
+            }
+            uri.append("brand=").append(URLEncoder.encode(brand, StandardCharsets.UTF_8));
+            hasParam = true;
+        }
+        if (!hasParam) {
+            System.out.println("REST search skipped: provide at least name or brand");
+            return;
+        }
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(uri.toString()))
+                .GET()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST /items/search status: " + response.statusCode());
+        System.out.println("REST /items/search body: " + response.body());
+    }
+
+    public static void runRestEditItem(String itemId, String email, String itemName,
+                                       String description, double price, int quantity) throws Exception {
+        String json = "{\"email\":\"" + email + "\",\"itemName\":\"" + itemName
+                + "\",\"description\":\"" + description + "\",\"price\":" + price
+                + ",\"quantity\":" + quantity + ",\"categoryId\":" + testCategoryId + ",\"brandId\":" + testBrandId + "}";
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/items/" + itemId))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST PUT /items/" + itemId + " status: " + response.statusCode());
+        System.out.println("REST PUT /items/" + itemId + " body: " + response.body());
+    }
+
+    public static void sendExit(Client c, String username) {
         try {
             JsonObject exitReq = new JsonObject();
             exitReq.addProperty("action", "EXIT");
             c.sendRequest(exitReq);
             System.out.println("[User " + username + "]: Connection closing.");
         } catch (IOException e) {
-            System.out.println("Exit Error: " + e);
+            System.out.println("Exit error: " + e);
         }
     }
 
-    public static void runRestDepositTest() throws Exception {
+    public static void runRestDepositTest(String email, double amount) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 
-        String json = "{\"email\":\"bebo@gmail.com\",\"amount\":50}";
+        String json = "{\"email\":\"" + email + "\",\"amount\":" + amount + "}";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:7000/deposit"))
                 .header("Content-Type", "application/json")
@@ -98,14 +274,14 @@ public class Main {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println("REST status: " + response.statusCode());
-        System.out.println("REST body: " + response.body());
+        System.out.println("REST /deposit status: " + response.statusCode());
+        System.out.println("REST /deposit body: " + response.body());
     }
 
-    public static void runRestAddItemTest(String email) throws Exception {
+    public static String runRestAddItemTest(String email) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 
-        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"price\":1200,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
+        String json = "{\"itemName\":\"Gaming Laptop\",\"description\":\"Gaming laptop\",\"price\":1200,\"quantity\":2,\"categoryId\":" + testCategoryId + ",\"brandId\":" + testBrandId + ",\"email\":\"" + email + "\"}";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:7000/items"))
                 .header("Content-Type", "application/json")
@@ -115,19 +291,34 @@ public class Main {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST /items status: " + response.statusCode());
         System.out.println("REST /items body: " + response.body());
+
+        JsonObject body = JsonParser.parseString(response.body()).getAsJsonObject();
+        if (!"OK".equals(body.get("status").getAsString())) {
+            throw new RuntimeException("Add item failed: " + response.body());
+        }
+        return body.get("itemId").getAsString();
+    }
+
+    private static void ensureTestCatalogData() throws SQLException {
+        try (Connection conGlobal = DriverManager.getConnection(DB_BASE_URL + "databaseName=Global;", DB_USER, DB_PASS)) {
+            Category_DAO categoryDao = new Category_DAO(conGlobal);
+            Brand_DAO brandDao = new Brand_DAO(conGlobal);
+            testCategoryId = categoryDao.findOrCreateCategory("Electronics");
+            testBrandId = brandDao.findOrCreateBrand("Dell", "https://example.com/dell.png");
+        }
+        System.out.println("Test catalog ready: categoryId=" + testCategoryId + ", brandId=" + testBrandId);
     }
 
     public static void runReportTest(Client c, String email) {
-    try {
-        JsonObject req = new JsonObject();
-        req.addProperty("action", "GET_REPORT");
-        req.addProperty("email", email);
+        try {
+            JsonObject req = new JsonObject();
+            req.addProperty("action", "GET_REPORT");
+            req.addProperty("email", email);
 
-        c.sendRequest(req);
-        System.out.println("REPORT response: " + c.receiveResponse());
-    } catch (IOException e) {
-        System.out.println("Report Error: " + e);
+            c.sendRequest(req);
+            System.out.println("REPORT response: " + c.receiveResponse());
+        } catch (IOException e) {
+            System.out.println("Report Error: " + e);
+        }
     }
-}
-    
 }
