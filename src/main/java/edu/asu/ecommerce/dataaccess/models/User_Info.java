@@ -10,9 +10,6 @@ public class User_Info {
     private double balance;
 
 
-
-
-
     public User_Info(String id, String email, String password, double balance){
         this.id = id;
         this.email = email;

@@ -1,4 +1,3 @@
-
 package edu.asu.ecommerce;
 
 import com.google.gson.JsonObject;
@@ -14,49 +13,51 @@ import java.net.http.HttpResponse;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        
+
         Client c1 = new Client(new Socket("localhost", 1234));
         Client c2 = new Client(new Socket("localhost", 1234));
 
         // --- USER 1 THREAD ---
         Thread user1 = new Thread(() -> runRegistration(c1, "karim", "3333", "karim@gmail.com","North"));
 
-
         // --- USER 2 THREAD ---
         Thread user2 = new Thread(() -> runRegistration(c2, "bebo", "1234", "bebo@gmail.com","South"));
 
-        
         user1.start();
         user2.start();
 
         user1.join();
         user2.join();
 
-        runLogin(c1, "karim@gmail.com", "3333", "karim");
+        runLogin(c1, "bebo@gmail.com", "1234", "bebo");
+
+        //runRestAddItemTest("karim@gmail.com");
+
+        runPurchase(c1, "karim", "cec4b7d0-38e0-4da9-a20e-8b10343470c0");
 
         sendExit(c1, "karim");
         sendExit(c2, "bebo");
-        runRestDepositTest();
-        runRestAddItemTest("karim@gmail.com");
+
+        //runRestDepositTest();
+
     }
-    
+
     public static void runRegistration(Client c, String username, String password, String email, String region){
         try {
-                
-                JsonObject reqC1 = new JsonObject();
-                reqC1.addProperty("action", "REGISTER");
-                reqC1.addProperty("username", username);
-                reqC1.addProperty("password", password);
-                reqC1.addProperty("email", email);
-                reqC1.addProperty("region", region);
+            JsonObject reqC1 = new JsonObject();
+            reqC1.addProperty("action", "REGISTER");
+            reqC1.addProperty("username", username);
+            reqC1.addProperty("password", password);
+            reqC1.addProperty("email", email);
+            reqC1.addProperty("region", region);
 
-                System.out.println("[User " + username +"]: Sending request...");
-                c.sendRequest(reqC1);
-                System.out.println("[User " + username +"]: Server replied: " + c.receiveResponse());
-                
-            } catch (IOException e) {
-                System.out.println("User 1 Error: " + e);
-            }
+            System.out.println("[User " + username +"]: Sending request...");
+            c.sendRequest(reqC1);
+            System.out.println("[User " + username +"]: Server replied: " + c.receiveResponse());
+
+        } catch (IOException e) {
+            System.out.println("User 1 Error: " + e);
+        }
     }
 
     public static void runLogin(Client c, String email, String password, String username){
@@ -72,6 +73,21 @@ public class Main {
 
         } catch (IOException e) {
             System.out.println("Login Error: " + e);
+        }
+    }
+
+    public static void runPurchase(Client c, String username, String itemId){
+        try {
+            JsonObject purchaseReq = new JsonObject();
+            purchaseReq.addProperty("action", "PURCHASE");
+            purchaseReq.addProperty("itemId", itemId);
+
+            System.out.println("[User " + username + "]: Sending purchase request for item ID " + itemId + "...");
+            c.sendRequest(purchaseReq);
+            System.out.println("[User " + username + "]: Server replied: " + c.receiveResponse());
+
+        } catch (IOException e) {
+            System.out.println("Purchase Error: " + e);
         }
     }
 
@@ -104,7 +120,7 @@ public class Main {
     public static void runRestAddItemTest(String email) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 
-        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"price\":1200,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
+        String json = "{\"itemName\":\"Laptop\",\"description\":\"Gaming laptop\",\"price\":100,\"quantity\":2,\"categoryId\":1,\"brandId\":1,\"email\":\"" + email + "\"}";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:7000/items"))
                 .header("Content-Type", "application/json")
@@ -115,5 +131,4 @@ public class Main {
         System.out.println("REST /items status: " + response.statusCode());
         System.out.println("REST /items body: " + response.body());
     }
-    
 }

@@ -9,11 +9,11 @@ public class UserInventory {
     private final LocalDateTime dateCreated;
     private final String region;
 
-    public UserInventory(String userId, String itemId, String state, LocalDateTime dateCreated, String region) {
+    public UserInventory(String userId, String itemId, String state, String region) {
         this.userId = userId;
         this.itemId = itemId;
         this.state = state;
-        this.dateCreated = dateCreated;
+        this.dateCreated = LocalDateTime.now();
         this.region = region;
     }
 

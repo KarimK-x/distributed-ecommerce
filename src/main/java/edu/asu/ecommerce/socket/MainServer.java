@@ -12,7 +12,11 @@
 
     import com.google.gson.JsonObject;
     import com.google.gson.JsonParser;
+    import edu.asu.ecommerce.dataaccess.models.Item;
     import edu.asu.ecommerce.services.AuthenticationService;
+    import edu.asu.ecommerce.services.ItemService;
+    import edu.asu.ecommerce.services.OrderService;
+    import edu.asu.ecommerce.services.UserService;
     import edu.asu.ecommerce.socket.handlers.*;
 
 
@@ -65,7 +69,12 @@
                 
                 //----SERVICES----
                 AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth); //Sayebha using centralized db for now
-                //Add other services here, using the connection they need.
+                ItemService itemService = new ItemService(conGlobal);
+                OrderService orderService = new OrderService(conSecure);
+                UserService userService = new UserService(conSecure,conNorth,conSouth);
+
+                String user_logged = null;
+
 
                 
                 while(isRunning){
@@ -84,6 +93,11 @@
                         case "LOGIN":
                             LoginHandler logHandler = new LoginHandler(authService, request);
                             response = logHandler.handle();
+                            user_logged = response.get("userId").getAsString();
+                            break;
+                        case "PURCHASE":
+                            PurchaseHandler purchaseHandler = new PurchaseHandler(userService,itemService, orderService);
+                            response = purchaseHandler.handle(request,user_logged);
                             break;
                         case "EXIT":
                             isRunning = false;
