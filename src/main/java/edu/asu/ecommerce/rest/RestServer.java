@@ -10,9 +10,9 @@ import com.google.gson.JsonParser;
 import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
 import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.User;
+import edu.asu.ecommerce.services.AuthenticationService;
 import edu.asu.ecommerce.services.ItemService;
 import edu.asu.ecommerce.services.UserService;
-import edu.asu.ecommerce.services.AuthenticationService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
@@ -362,4 +362,6 @@ public class RestServer {
 			ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
 		}
 	}
+
 }
+

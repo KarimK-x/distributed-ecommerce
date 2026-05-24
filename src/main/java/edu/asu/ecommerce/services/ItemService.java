@@ -24,7 +24,7 @@ public class ItemService {
 	}
 
 	public String addItem(String itemName, String description, double price, int quantity,
-						  int categoryId, int brandId, String sellerId) throws Exception {
+			int categoryId, int brandId, String sellerId) throws Exception {
 		Item item = new Item(itemName, description, price, quantity, categoryId, brandId, sellerId);
 
 		boolean itemInserted = itemDao.insertItem(item);
@@ -53,11 +53,11 @@ public class ItemService {
 	}
 
 	// public Item getItemById(String itemId) throws SQLException {
-	// 	return itemDao.getItemById(itemId);
+	// return itemDao.getItemById(itemId);
 	// }
 
 	public void updateItem(String itemId, String itemName, String description, double price, int quantity,
-						   int categoryId, int brandId) throws Exception {
+			int categoryId, int brandId) throws Exception {
 		Item existing = itemDao.getItemById(itemId);
 		if (existing == null) {
 			throw new Exception("item not found");
@@ -75,7 +75,7 @@ public class ItemService {
 	}
 
 	public List<Item> searchAvailableItems(String nameQuery, String brandQuery,
-										   Connection conNorth, Connection conSouth) throws SQLException {
+			Connection conNorth, Connection conSouth) throws SQLException {
 		List<Item> candidates = itemDao.searchByNameAndBrand(nameQuery, brandQuery);
 		UserInventory_DAO northDao = new UserInventory_DAO(conNorth);
 		UserInventory_DAO southDao = new UserInventory_DAO(conSouth);
