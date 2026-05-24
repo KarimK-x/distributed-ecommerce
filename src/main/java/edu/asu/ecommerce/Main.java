@@ -51,18 +51,19 @@ public class Main {
             JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
             return gson.toJson(json);
         } catch (Exception e) {
-            return jsonString; // Fallback just in case the server sends a plain text error
+            return jsonString;
         }
     }
 
     public static void main(String[] args) throws Exception {
         ensureTestCatalogData();
-        
+        ensureExternalStoreData();
+
         Client sellerClient = new Client(new Socket("localhost", 1234));
         Client buyerClient = new Client(new Socket("localhost", 1234));
 
         CompletableFuture<String> publishedItemFuture = new CompletableFuture<>();
-        
+
         CompletableFuture<Void> purchaseCompletedFuture = new CompletableFuture<>();
 
         // THREAD 1 THE SELLER
@@ -71,7 +72,7 @@ public class Main {
                 System.out.println("=== [" + TEST_USERNAME + "] Setup: register & login ===");
                 runRegistration(sellerClient, TEST_USERNAME, TEST_PASSWORD, TEST_EMAIL, TEST_REGION_1);
                 String sellerId = runLogin(sellerClient, TEST_EMAIL, TEST_PASSWORD, TEST_USERNAME);
-                
+
                 if (sellerId == null) {
                     System.out.println("[" + TEST_USERNAME + "] Login failed; stopping tests.");
                     publishedItemFuture.completeExceptionally(new RuntimeException("Seller login failed"));
@@ -80,22 +81,18 @@ public class Main {
                 }
                 System.out.println("[" + TEST_USERNAME + "] Logged in userId: " + sellerId);
 
-                // ---> NEW: Test the ADD_STORE socket action <---
-                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: ADD_STORE ===");
-                runSocketAddStore(sellerClient, TEST_USERNAME, TEST_EMAIL, "Ziad Mega Electronics");
+                System.out.println("\n=== [" + TEST_USERNAME + "] Socket: ADD_STORE ==="); runSocketAddStore(sellerClient, TEST_USERNAME, TEST_EMAIL, "Ziad Mega Electronics");
 
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: add item (purchase) ===");
                 String purchasedItemId = runRestAddItem(TEST_EMAIL, "Gaming Laptop", 10);
                 System.out.println("[" + TEST_USERNAME + "] Created itemId (purchase): " + purchasedItemId);
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: add item (available) ===");
                 String availableItemId = runSocketAddItem(sellerClient, TEST_USERNAME, TEST_EMAIL, "Office Laptop", 12);
                 System.out.println("[" + TEST_USERNAME + "] Created itemId (available): " + availableItemId);
 
-                // SYNC POINT 1: Hand the itemId over to the buyer thread!
                 publishedItemFuture.complete(purchasedItemId);
 
-                // SYNC POINT 2: Wait for the buyer to finish purchasing before checking account state
                 System.out.println("[" + TEST_USERNAME + "] Waiting for buyer to complete transaction...");
                 purchaseCompletedFuture.join();
                 System.out.println("[" + TEST_USERNAME + "] Transaction verified. Resuming checks...");
@@ -105,44 +102,50 @@ public class Main {
 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS ===");
                 runSocketSearch(sellerClient, null, "Dell");
-                
+
+                System.out.println("\n=== [EXTERNAL STORE] Integration Test ===");
+                String externalItemId = runRestAddItem(TEST_EMAIL, "Partner Exclusive Headset", 85.00);
+                System.out.println("[EXTERNAL STORE] Target Item Created: " + externalItemId);
+
+                runRestExternalPurchase(TEST_STORE_API_KEY, externalItemId);
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: search items ===");
                 runRestSearch(null, "Dell");
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: EDIT_ITEM ===");
                 runEditItem(sellerClient, TEST_EMAIL, availableItemId, "Office Laptop Pro", "Updated description", 60, 1);
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: edit item ===");
                 runRestEditItem(availableItemId, TEST_EMAIL, "Office Laptop Pro REST", "Updated via REST", 60, 1);
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] REST: delete item ===");
                 runRestDeleteItem(availableItemId, TEST_EMAIL);
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: delete item ===");
-                
+
                 // Note: This is meant to fail y3ny to show deleting item that is sold is not an option
                 try {
                     runSocketDeleteItem(sellerClient, TEST_USERNAME, purchasedItemId, TEST_EMAIL);
                 } catch (RuntimeException ignored) { /* rejection already printed */ }
-                 
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: VIEW_ACCOUNT ===");
                 runViewAccount(sellerClient, TEST_EMAIL);
-              
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: BULK_UPLOAD_ITEMS ===");
                 String bulkCsv = "itemName,description,price,quantity,categoryId,brandId,email\n"
-                    + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
-                    + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
-                    + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL;
+                        + "Mechanical Keyboard,RGB TKL keyboard,89.99,20," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+                        + "Gaming Mouse,High DPI gaming mouse,59.99,15," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL + "\n"
+                        + "USB Hub,7-port USB 3.0 hub,34.99,50," + testCategoryId + "," + testBrandId + "," + TEST_EMAIL;
                 runBulkUploadItems(sellerClient, bulkCsv);
 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: GET_REPORT ===");
                 runReportTest(sellerClient, TEST_EMAIL);
-                
+
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: SEARCH_ITEMS (after edit) ===");
                 runSocketSearch(sellerClient, "Gaming", null);
 
                 sendExit(sellerClient, TEST_USERNAME);
-                
+
             } catch (Exception e) {
                 System.out.println("[" + TEST_USERNAME + "] Demo flow error:");
                 e.printStackTrace();
@@ -158,13 +161,13 @@ public class Main {
                 System.out.println("=== [" + TEST_USERNAME_2 + "] Setup: register & login ===");
                 runRegistration(buyerClient, TEST_USERNAME_2, TEST_PASSWORD_2, TEST_EMAIL_2, TEST_REGION_2);
                 String buyerId = runLogin(buyerClient, TEST_EMAIL_2, TEST_PASSWORD_2, TEST_USERNAME_2);
-                
+
                 if (buyerId == null) {
                     System.out.println("[" + TEST_USERNAME_2 + "] Login failed; stopping purchase step.");
                     purchaseCompletedFuture.completeExceptionally(new RuntimeException("Buyer login failed"));
                 } else {
                     System.out.println("[" + TEST_USERNAME_2 + "] Logged in userId: " + buyerId);
-                    
+
                     System.out.println("\n=== [" + TEST_USERNAME_2 + "] REST: deposit ===");
                     runRestDepositTest(TEST_EMAIL_2, 10000);
 
@@ -174,12 +177,11 @@ public class Main {
                     System.out.println("[" + TEST_USERNAME_2 + "] Waiting for item to hit the market...");
 
                     // Like el sempahore it waits until seller signals it with the id
-                    String itemIdToBuy = publishedItemFuture.join(); 
+                    String itemIdToBuy = publishedItemFuture.join();
 
                     System.out.println("\n=== [" + TEST_USERNAME_2 + "] Item found! Purchasing... ===");
                     runPurchase(buyerClient, TEST_USERNAME_2, itemIdToBuy);
-                    
-                    // SYNC POINT 2: Tell the seller we are done!
+
                     purchaseCompletedFuture.complete(null);
                 }
 
@@ -187,7 +189,7 @@ public class Main {
                 runReportTest(buyerClient, TEST_EMAIL_2);
 
                 sendExit(buyerClient, TEST_USERNAME_2);
-                
+
             } catch (Exception e) {
                 System.out.println("[" + TEST_USERNAME_2 + "] Demo flow error:");
                 e.printStackTrace();
@@ -201,7 +203,7 @@ public class Main {
 
         sellerThread.join();
         buyerThread.join();
-        
+
         System.out.println("Demo complete.");
     }
 
@@ -533,7 +535,7 @@ public class Main {
     public static void runRestExternalPurchase(String apiKey, String itemId) throws Exception {
         String json = "{\"itemId\":\"" + itemId + "\"}";
         HttpClient client = HttpClient.newHttpClient();
-        
+
         // Notice the x-api-key header implementation
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:7000/purchase"))
@@ -541,7 +543,7 @@ public class Main {
                 .header("x-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
-                
+
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST POST /purchase (External API) status: " + response.statusCode());
         System.out.println("REST POST /purchase (External API) body:\n" + formatJson(response.body()));
@@ -555,7 +557,7 @@ public class Main {
              Connection conNorth = DriverManager.getConnection(northUrl, DB_USER, DB_PASS)) {
 
             String insertProfile = "IF NOT EXISTS (SELECT 1 FROM Profile WHERE userID = ?) " +
-                                   "INSERT INTO Profile (userID, userName, createdAt, region) VALUES (?, ?, GETDATE(), 'North')";
+                    "INSERT INTO Profile (userID, userName, createdAt, region) VALUES (?, ?, GETDATE(), 'North')";
             try (PreparedStatement pst = conNorth.prepareStatement(insertProfile)) {
                 pst.setString(1, TEST_STORE_ID);
                 pst.setString(2, TEST_STORE_ID);
@@ -564,7 +566,7 @@ public class Main {
             }
 
             String insertUserInfo = "IF NOT EXISTS (SELECT 1 FROM UserInfo WHERE userID = ?) " +
-                                    "INSERT INTO UserInfo (userID, email, passwordHash, balance) VALUES (?, ?, 'no-login', 50000.0)";
+                    "INSERT INTO UserInfo (userID, email, passwordHash, balance) VALUES (?, ?, 'no-login', 50000.0)";
             try (PreparedStatement pst = conSecure.prepareStatement(insertUserInfo)) {
                 pst.setString(1, TEST_STORE_ID);
                 pst.setString(2, TEST_STORE_ID);
@@ -573,7 +575,7 @@ public class Main {
             }
 
             String insertStore = "IF NOT EXISTS (SELECT 1 FROM ExternalStoreInfo WHERE apiKey = ?) " +
-                                 "INSERT INTO ExternalStoreInfo (storeID, ownerID, storeName, apiKey) VALUES (NEWID(), ?, ?, ?)";
+                    "INSERT INTO ExternalStoreInfo (storeID, ownerID, storeName, apiKey) VALUES (NEWID(), ?, ?, ?)";
             try (PreparedStatement pst = conNorth.prepareStatement(insertStore)) {
                 pst.setString(1, TEST_STORE_API_KEY);
                 pst.setString(2, TEST_STORE_ID);
@@ -584,23 +586,22 @@ public class Main {
         }
         System.out.println("External Store test data ready: apiKey=" + TEST_STORE_API_KEY);
     }
+
     public static void runSocketAddStore(Client c, String username, String email, String storeName) {
         try {
             JsonObject req = new JsonObject();
             req.addProperty("action", "ADD_STORE");
             req.addProperty("email", email);
             req.addProperty("storeName", storeName);
-
             System.out.println("[User " + username + "]: Sending ADD_STORE for " + storeName + "...");
-            c.sendRequest(req);
-            String responseStr = c.receiveResponse();
+            c.sendRequest(req); String responseStr = c.receiveResponse();
             System.out.println("[User " + username + "]:\n" + formatJson(responseStr));
-
             JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
             if (!"OK".equals(response.get("status").getAsString())) {
                 System.out.println("[WARNING] Add store failed: " + responseStr);
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             System.out.println("ADD_STORE error: " + e);
         }
     }

@@ -37,7 +37,7 @@ public class RestServer {
 		Javalin app = Javalin.create(config -> config.http.defaultContentType = "application/json").start(7000);
 
 		app.post("/items", ctx -> {
-            implementAddItem(ctx);
+			implementAddItem(ctx);
 		});
 
 		app.put("/items/{id}", ctx -> {
@@ -53,8 +53,12 @@ public class RestServer {
 		});
 
 		app.post("/deposit", ctx -> {
-            implementDeposit(ctx);
-        });
+			implementDeposit(ctx);
+		});
+
+		app.post("/purchase", ctx -> {
+			implementExternalPurchase(ctx);
+		});
 	}
 
 	private static JsonObject parseJson(Context ctx) {
@@ -102,8 +106,8 @@ public class RestServer {
 		ctx.status(501).result(errorResponse("501", message).toString());
 	}
 
-    private static void implementAddItem(Context ctx){
-        {
+	private static void implementAddItem(Context ctx){
+		{
 			JsonObject request = parseJson(ctx);
 			if (request == null) {
 				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
@@ -125,9 +129,9 @@ public class RestServer {
 			}
 
 			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-					 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
-					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+				 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+				 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+				 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
 				User user = authService.getUserByEmail(email);
@@ -158,53 +162,53 @@ public class RestServer {
 			} catch (Exception e) {
 				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
 			}
-        }
-    }
-    private static void implementDeposit(Context ctx){
-        JsonObject request = parseJson(ctx);
-			if (request == null) {
-				ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+		}
+	}
+	private static void implementDeposit(Context ctx){
+		JsonObject request = parseJson(ctx);
+		if (request == null) {
+			ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+			return;
+		}
+
+		String email = getString(request, "email");
+		Double amount = getDouble(request, "amount");
+
+		if (email == null || email.isBlank() || amount == null) {
+			ctx.status(400).result(errorResponse("400", "email and amount are required").toString());
+			return;
+		}
+		if (amount <= 0) {
+			ctx.status(400).result(errorResponse("400", "amount must be greater than zero").toString());
+			return;
+		}
+
+		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+			UserService userService = new UserService(conSecure, conNorth, conSouth);
+			AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+
+			userService.depositCash(email, amount);
+			User user = authService.getUserByEmail(email);
+
+			if (user == null) {
+				ctx.status(404).result(errorResponse("404", "User not found").toString());
 				return;
 			}
 
-			String email = getString(request, "email");
-			Double amount = getDouble(request, "amount");
-
-			if (email == null || email.isBlank() || amount == null) {
-				ctx.status(400).result(errorResponse("400", "email and amount are required").toString());
-				return;
-			}
-			if (amount <= 0) {
-				ctx.status(400).result(errorResponse("400", "amount must be greater than zero").toString());
-				return;
-			}
-
-			try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-					 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-					 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
-
-				UserService userService = new UserService(conSecure, conNorth, conSouth);
-				AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
-
-                userService.depositCash(email, amount);
-				User user = authService.getUserByEmail(email);
-
-				if (user == null) {
-					ctx.status(404).result(errorResponse("404", "User not found").toString());
-					return;
-				}
-
-				JsonObject response = new JsonObject();
-				response.addProperty("status", "OK");
-				response.addProperty("message", "Deposit successful");
-				response.addProperty("balance", user.getBalance());
-				ctx.result(response.toString());
-			} catch (SQLException se) {
-				ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
-			} catch (Exception e) {
-				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
-			}
-    }
+			JsonObject response = new JsonObject();
+			response.addProperty("status", "OK");
+			response.addProperty("message", "Deposit successful");
+			response.addProperty("balance", user.getBalance());
+			ctx.result(response.toString());
+		} catch (SQLException se) {
+			ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+		} catch (Exception e) {
+			ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+		}
+	}
 
 	private static void implementEditItem(Context ctx) {
 		String itemId = ctx.pathParam("id");
@@ -234,9 +238,9 @@ public class RestServer {
 		}
 
 		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-				 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
-				 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-				 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+			 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 			UserService userService = new UserService(conSecure, conNorth, conSouth);
 			ItemService itemService = new ItemService(conGlobal);
@@ -275,9 +279,9 @@ public class RestServer {
 		}
 
 		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-				 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
-				 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-				 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+			 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 			AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
 			User user = authService.getUserByEmail(email);
@@ -338,8 +342,8 @@ public class RestServer {
 		}
 
 		try (Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
-				 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-				 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 			ItemService itemService = new ItemService(conGlobal);
 			var items = itemService.searchAvailableItems(nameQuery, brandQuery, conNorth, conSouth);
@@ -370,7 +374,7 @@ public class RestServer {
 	private static void implementExternalPurchase(Context ctx) {
 		// 1. Extract the API Key from the headers (Standard REST practice)
 		String apiKey = ctx.header("x-api-key");
-		
+
 		if (apiKey == null || apiKey.isBlank()) {
 			ctx.status(401).result(errorResponse("401", "Missing x-api-key header").toString());
 			return;
@@ -389,14 +393,14 @@ public class RestServer {
 		}
 
 		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
-			Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
-			Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
-			Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+			 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+			 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+			 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
 
 			// 2. Instantiate the new DAOs (Checking both regions for the API key)
 			ExternalStoreInfo_DAO northStoreDao = new ExternalStoreInfo_DAO(conNorth);
 			ExternalStoreInfo_DAO southStoreDao = new ExternalStoreInfo_DAO(conSouth);
-			
+
 			ExternalStoreInfo storeInfo = northStoreDao.getStoreByApiKey(apiKey);
 			if (storeInfo == null) {
 				storeInfo = southStoreDao.getStoreByApiKey(apiKey);
@@ -417,28 +421,31 @@ public class RestServer {
 
 			// 4. Use the ownerID from the store profile to execute the existing logic
 			String buyerId = storeInfo.getOwnerId();
-			
+
 			UserService userService = new UserService(conSecure, conNorth, conSouth);
 			userService.purchase(buyerId, item);
-			
+
 			OrderService orderService = new OrderService(conSecure);
 			orderService.processFullOrderTransaction(
-				buyerId,
-				item.getSellerId(),
-				itemId,
-				item.getPrice(),
-				"EXTERNAL_STORE" 
+					buyerId,
+					item.getSellerId(),
+					itemId,
+					item.getPrice(),
+					"EXTERNAL_STORE"
 			);
 
 			JsonObject response = new JsonObject();
+
+
 			response.addProperty("status", "OK");
 			response.addProperty("message", "External purchase successful for store: " + storeInfo.getStoreName());
+			response.addProperty("itemId", item.getId());
+			response.addProperty("itemName", item.getItemName());
 			ctx.result(response.toString());
 
 		} catch (Exception e) {
 			ctx.status(500).result(errorResponse("500", e.getMessage()).toString());
-	    }
+		}
 	}
 
 }
-
