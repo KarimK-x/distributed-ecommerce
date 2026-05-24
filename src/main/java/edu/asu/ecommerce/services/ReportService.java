@@ -43,8 +43,8 @@ public class ReportService {
         String userId = info.getId();
         UserInventory_DAO inventoryDao = getInventoryDaoByUserId(userId);
 
-        double totalSpent = ledgerEntryDao.getTotalByType(userId, "Buy");
-        double totalEarned = ledgerEntryDao.getTotalByType(userId, "Sell");
+        double totalSpent = ledgerEntryDao.getTotalByType(userId, "PURCHASE");
+        double totalEarned = ledgerEntryDao.getTotalByType(userId, "SALE");
 
         List<UserInventory> boughtItems = inventoryDao.getInventoryByUserAndState(userId, "Bought");
         List<UserInventory> soldItems = inventoryDao.getInventoryByUserAndState(userId, "Sold");
