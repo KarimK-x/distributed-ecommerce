@@ -80,13 +80,17 @@ public class Main {
                 System.out.println("[" + buyerUsername + "] Logged in userId: " + buyerId);
                 System.out.println("\n=== [" + buyerUsername + "] REST: deposit ===");
                 runRestDepositTest(buyerEmail, 10000);
+
+                System.out.println("\n=== [" + buyerUsername + "] Socket: deposit ===");
+                runSocketDeposit(buyerClient, buyerUsername, buyerEmail, 50);
             }
 
-            System.out.println("\n=== [" + sellerUsername + "] REST: add items ===");
-            String purchasedItemId = runRestAddItemTest(sellerEmail, "Gaming Laptop", 10);
-            String availableItemId = runRestAddItemTest(sellerEmail, "Office Laptop", 12);
-
+            System.out.println("\n=== [" + sellerUsername + "] REST: add item (purchase) ===");
+            String purchasedItemId = runRestAddItem(sellerEmail, "Gaming Laptop", 10);
             System.out.println("[" + sellerUsername + "] Created itemId (purchase): " + purchasedItemId);
+
+            System.out.println("\n=== [" + sellerUsername + "] Socket: add item (available) ===");
+            String availableItemId = runSocketAddItem(sellerClient, sellerUsername, sellerEmail, "Office Laptop", 12);
             System.out.println("[" + sellerUsername + "] Created itemId (available): " + availableItemId);
 
             if (buyerId != null) {
@@ -107,6 +111,12 @@ public class Main {
 
             System.out.println("\n=== [" + sellerUsername + "] REST: edit item ===");
             runRestEditItem(availableItemId, sellerEmail, "Office Laptop Pro REST", "Updated via REST", 60, 1);
+
+            System.out.println("\n=== [" + sellerUsername + "] REST: delete item ===");
+            runRestDeleteItem(availableItemId, sellerEmail);
+
+            System.out.println("\n=== [" + sellerUsername + "] Socket: delete item ===");
+            runSocketDeleteItem(sellerClient, sellerUsername, purchasedItemId, sellerEmail);
 
             System.out.println("\n=== [" + sellerUsername + "] Socket: VIEW_ACCOUNT ===");
             runViewAccount(sellerClient, sellerEmail);
@@ -279,6 +289,29 @@ public class Main {
         System.out.println("REST PUT /items/" + itemId + " body: " + response.body());
     }
 
+    public static String runSocketAddItem(Client c, String username, String email, String itemName, double price) throws Exception {
+        JsonObject req = new JsonObject();
+        req.addProperty("action", "ADD_ITEM");
+        req.addProperty("itemName", itemName);
+        req.addProperty("description", itemName);
+        req.addProperty("price", price);
+        req.addProperty("quantity", 2);
+        req.addProperty("categoryId", testCategoryId);
+        req.addProperty("brandId", testBrandId);
+        req.addProperty("email", email);
+
+        System.out.println("[User " + username + "]: Sending ADD_ITEM for " + itemName + "...");
+        c.sendRequest(req);
+        String responseStr = c.receiveResponse();
+        System.out.println("[User " + username + "]: " + responseStr);
+
+        JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
+        if (!"OK".equals(response.get("status").getAsString())) {
+            throw new RuntimeException("Add item failed: " + responseStr);
+        }
+        return response.get("itemId").getAsString();
+    }
+
     public static void runPurchase(Client c, String username, String itemId){
         try {
             JsonObject purchaseReq = new JsonObject();
@@ -291,6 +324,40 @@ public class Main {
 
         } catch (IOException e) {
             System.out.println("Purchase Error: " + e);
+        }
+    }
+
+    public static void runSocketDeleteItem(Client c, String username, String itemId, String email) throws Exception {
+        JsonObject req = new JsonObject();
+        req.addProperty("action", "DELETE_ITEM");
+        req.addProperty("itemId", itemId);
+        req.addProperty("email", email);
+
+        System.out.println("[User " + username + "]: Sending DELETE_ITEM for item ID " + itemId + "...");
+        c.sendRequest(req);
+        String responseStr = c.receiveResponse();
+        System.out.println("[User " + username + "]: " + responseStr);
+
+        JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
+        if (!"OK".equals(response.get("status").getAsString())) {
+            throw new RuntimeException("Delete item failed: " + responseStr);
+        }
+    }
+
+    public static void runSocketDeposit(Client c, String username, String email, double amount) throws Exception {
+        JsonObject req = new JsonObject();
+        req.addProperty("action", "DEPOSIT");
+        req.addProperty("email", email);
+        req.addProperty("amount", amount);
+
+        System.out.println("[User " + username + "]: Sending DEPOSIT for " + amount + "...");
+        c.sendRequest(req);
+        String responseStr = c.receiveResponse();
+        System.out.println("[User " + username + "]: " + responseStr);
+
+        JsonObject response = JsonParser.parseString(responseStr).getAsJsonObject();
+        if (!"OK".equals(response.get("status").getAsString())) {
+            throw new RuntimeException("Deposit failed: " + responseStr);
         }
     }
 
@@ -320,11 +387,11 @@ public class Main {
         System.out.println("REST /deposit body: " + response.body());
     }
 
-    public static String runRestAddItemTest(String email) throws Exception {
-        return runRestAddItemTest(email, "Gaming Laptop", 10);
+    public static String runRestAddItem(String email) throws Exception {
+        return runRestAddItem(email, "Gaming Laptop", 10);
     }
 
-    public static String runRestAddItemTest(String email, String itemName, double price) throws Exception {
+    public static String runRestAddItem(String email, String itemName, double price) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
 
         String json = "{\"itemName\":\"" + itemName + "\",\"description\":\"" + itemName + "\",\"price\":" + price + ",\"quantity\":2,\"categoryId\":" + testCategoryId + ",\"brandId\":" + testBrandId + ",\"email\":\"" + email + "\"}";
@@ -343,6 +410,21 @@ public class Main {
             throw new RuntimeException("Add item failed: " + response.body());
         }
         return body.get("itemId").getAsString();
+    }
+
+    public static void runRestDeleteItem(String itemId, String email) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        String json = "{\"email\":\"" + email + "\"}";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:7000/items/" + itemId))
+                .header("Content-Type", "application/json")
+                .method("DELETE", HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println("REST DELETE /items/" + itemId + " status: " + response.statusCode());
+        System.out.println("REST DELETE /items/" + itemId + " body: " + response.body());
     }
 
     private static void ensureTestCatalogData() throws SQLException {

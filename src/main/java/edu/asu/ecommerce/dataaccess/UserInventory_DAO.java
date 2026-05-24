@@ -107,6 +107,16 @@ public class UserInventory_DAO {
         }
     }
 
+    public boolean deleteInventoryEntry(String userId, String itemId, String state) throws SQLException {
+        String sql = "DELETE FROM UserInventory WHERE userID = ? AND itemID = ? AND state = ?";
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setString(1, userId);
+            pst.setString(2, itemId);
+            pst.setString(3, state);
+            return pst.executeUpdate() > 0;
+        }
+    }
+
     private UserInventory mapInventory(ResultSet rs) throws SQLException {
         return new UserInventory(
                 rs.getString("userID"),

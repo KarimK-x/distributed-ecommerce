@@ -7,6 +7,7 @@ package edu.asu.ecommerce.rest;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
 import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.User;
 import edu.asu.ecommerce.services.ItemService;
@@ -40,7 +41,7 @@ public class RestServer {
 		});
 
 		app.delete("/items/{id}", ctx -> {
-			notImplemented(ctx, "Delete item not implemented");
+			implementDeleteItem(ctx);
 		});
 
 		app.get("/items/search", ctx -> {
@@ -241,6 +242,79 @@ public class RestServer {
 			JsonObject response = new JsonObject();
 			response.addProperty("status", "OK");
 			response.addProperty("message", "Item updated");
+			response.addProperty("itemId", itemId);
+			ctx.result(response.toString());
+		} catch (SQLException se) {
+			ctx.status(500).result(errorResponse("777", "SQL ERROR").toString());
+		} catch (Exception e) {
+			ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
+		}
+	}
+
+	private static void implementDeleteItem(Context ctx) {
+		String itemId = ctx.pathParam("id");
+		if (itemId == null || itemId.isBlank()) {
+			ctx.status(400).result(errorResponse("400", "item id is required").toString());
+			return;
+		}
+
+		JsonObject request = parseJson(ctx);
+		if (request == null) {
+			ctx.status(400).result(errorResponse("400", "Invalid JSON").toString());
+			return;
+		}
+
+		String email = getString(request, "email");
+		if (email == null || email.isBlank()) {
+			ctx.status(400).result(errorResponse("400", "email is required").toString());
+			return;
+		}
+
+		try (Connection conSecure = DriverManager.getConnection(BASE_URL + "databaseName=Secure;", DB_USER, DB_PASS);
+				 Connection conGlobal = DriverManager.getConnection(BASE_URL + "databaseName=Global;", DB_USER, DB_PASS);
+				 Connection conNorth = DriverManager.getConnection(BASE_URL + "databaseName=North;", DB_USER, DB_PASS);
+				 Connection conSouth = DriverManager.getConnection(BASE_URL + "databaseName=South;", DB_USER, DB_PASS)) {
+
+			AuthenticationService authService = new AuthenticationService(conSecure, conNorth, conSouth);
+			User user = authService.getUserByEmail(email);
+			if (user == null) {
+				ctx.status(404).result(errorResponse("404", "User not found").toString());
+				return;
+			}
+
+			ItemService itemService = new ItemService(conGlobal);
+			Item item = itemService.getItemById(itemId);
+			if (item == null) {
+				ctx.status(404).result(errorResponse("404", "Item not found").toString());
+				return;
+			}
+			if (!user.getId().equalsIgnoreCase(item.getSellerId())) {
+				ctx.status(403).result(errorResponse("403", "Not authorized to delete this item").toString());
+				return;
+			}
+
+			UserInventory_DAO inventoryDao = user.getId().startsWith("S-") || user.getId().startsWith("s-")
+					? new UserInventory_DAO(conSouth)
+					: new UserInventory_DAO(conNorth);
+			if (!inventoryDao.hasInventoryEntry(user.getId(), itemId, "Available")) {
+				ctx.status(409).result(errorResponse("409", "Item is not available for delete").toString());
+				return;
+			}
+
+			boolean inventoryDeleted = inventoryDao.deleteInventoryEntry(user.getId(), itemId, "Available");
+			if (!inventoryDeleted) {
+				ctx.status(500).result(errorResponse("777", "Inventory delete failed").toString());
+				return;
+			}
+
+			itemService.deleteItem(itemId);
+			if (itemService.getItemById(itemId) != null) {
+				ctx.status(500).result(errorResponse("777", "Item delete failed").toString());
+				return;
+			}
+			JsonObject response = new JsonObject();
+			response.addProperty("status", "OK");
+			response.addProperty("message", "Item deleted");
 			response.addProperty("itemId", itemId);
 			ctx.result(response.toString());
 		} catch (SQLException se) {
