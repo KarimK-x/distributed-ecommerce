@@ -7,20 +7,22 @@ public class UserInventory {
     private final String itemId;
     private final String state;
     private final LocalDateTime dateCreated;
-    private final LocalDateTime dateSold;
     private final String region;
 
-    public UserInventory(String userId, String itemId, String state, LocalDateTime dateCreated, LocalDateTime dateSold, String region) {
+    public UserInventory(String userId, String itemId, String state, String region) {
         this.userId = userId;
         this.itemId = itemId;
         this.state = state;
-        this.dateCreated = dateCreated;
-        this.dateSold = dateSold;
+        this.dateCreated = LocalDateTime.now();
         this.region = region;
     }
 
     public UserInventory(String userId, String itemId, String state, LocalDateTime dateCreated, String region) {
-        this(userId, itemId, state, dateCreated, null, region);
+        this.userId = userId;
+        this.itemId = itemId;
+        this.state = state;
+        this.dateCreated = dateCreated;
+        this.region = region;
     }
 
     public String getUserId() {
@@ -37,10 +39,6 @@ public class UserInventory {
 
     public LocalDateTime getDateCreated() {
         return dateCreated;
-    }
-
-    public LocalDateTime getDateSold() {
-        return dateSold;
     }
 
     public String getRegion() {

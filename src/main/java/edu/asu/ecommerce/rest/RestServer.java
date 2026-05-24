@@ -111,6 +111,7 @@ public class RestServer {
 			Integer categoryId = getInteger(request, "categoryId");
 			Integer brandId = getInteger(request, "brandId");
 			String email = getString(request, "email");
+			//String sellerId = getString(request,"sellerId");
 
 			if (itemName == null || description == null || price == null || quantity == null
 					|| categoryId == null || brandId == null || email == null || email.isBlank()) {
@@ -132,7 +133,7 @@ public class RestServer {
 
 				ItemService productServices = new ItemService(conGlobal);
 				String itemId = productServices.addItem(itemName, description, price, quantity,
-						categoryId, brandId);
+						categoryId, brandId,user.getId());
 
 				UserService userService = new UserService(conSecure, conNorth, conSouth);
 				try {
@@ -148,8 +149,7 @@ public class RestServer {
 				response.addProperty("itemId", itemId);
 				ctx.result(response.toString());
 			} catch (SQLException se) {
-				se.printStackTrace();
-				ctx.status(500).result(errorResponse("777", "SQL ERROR: " + se.getMessage()).toString());
+				ctx.status(500).result(errorResponse("777", se.getMessage()).toString());
 			} catch (Exception e) {
 				ctx.status(400).result(errorResponse("505", e.getMessage()).toString());
 			}

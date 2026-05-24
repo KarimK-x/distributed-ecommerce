@@ -6,6 +6,7 @@ package edu.asu.ecommerce.services;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +18,7 @@ import edu.asu.ecommerce.dataaccess.UserInventory_DAO;
 import edu.asu.ecommerce.dataaccess.UserInfo_DAO;
 import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.LedgerEntry;
+import edu.asu.ecommerce.dataaccess.models.Item;
 import edu.asu.ecommerce.dataaccess.models.UserInventory;
 import edu.asu.ecommerce.dataaccess.models.User_Info;
 public class UserService{
@@ -88,7 +90,7 @@ public class UserService{
                 amount,
                 "DEPOSIT",
                 null,
-                LocalDateTime.now()
+                LocalDate.now()
         );
         boolean inserted = ledgerEntryDao.insertEntry(entry);
 
@@ -103,7 +105,6 @@ public class UserService{
                 userId,
                 itemId,
                 state,
-                LocalDateTime.now(),
                 region
         );
 
@@ -111,6 +112,42 @@ public class UserService{
         if (!inserted) {
             throw new SQLException("inventory insert failed");
         }
+    }
+
+
+
+    public void purchase(String buyerId, Item item) throws Exception{
+        User_Info buyer = userInfoDao.getUserById(buyerId);
+        System.out.println(buyerId);
+        String sellerId = item.getSellerId();
+        UserInventory_DAO userInventoryDao;
+        if(sellerId.charAt(0)=='N')
+            userInventoryDao = inventoryDaoNorth;
+        else
+            userInventoryDao = inventoryDaoSouth;
+
+        if(buyer.getBalance()>=item.getPrice()){
+
+            if(!userInventoryDao.editSellingItemById(item.getId()))
+                throw new Exception("Item is not available");
+
+            userInfoDao.decrementBalance(buyerId,item.getPrice());
+            userInfoDao.incrementBalance(sellerId,item.getPrice());
+
+
+            if(buyerId.charAt(0)=='N') {
+                System.out.println("north");
+                inventoryDaoNorth.insertInventory(new UserInventory(buyerId, item.getId(), "Bought", "North"));
+            }
+            else {
+                System.out.println("south");
+                inventoryDaoSouth.insertInventory(new UserInventory(buyerId, item.getId(), "Bought", "South"));
+            }
+        }
+        else{
+            throw new Exception("Insufficient Balance!!!");
+        }
+
     }
 
     public Map<String, Object> getAccountInfo(String email, ItemService itemService) throws Exception {

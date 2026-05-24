@@ -104,9 +104,6 @@ public class ReportService {
     }
 
     private LocalDateTime getEntryDate(UserInventory entry) {
-        if (entry.getDateSold() != null) {
-            return entry.getDateSold();
-        }
         return entry.getDateCreated();
     }
 

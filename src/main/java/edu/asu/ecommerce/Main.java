@@ -1,4 +1,3 @@
-
 package edu.asu.ecommerce;
 
 import com.google.gson.JsonObject;
@@ -68,6 +67,10 @@ public class Main {
             String itemId = runRestAddItemTest(email);
             System.out.println("[" + username + "] Created itemId: " + itemId);
 
+            runPurchase(c, "karim", "cec4b7d0-38e0-4da9-a20e-8b10343470c0");
+
+
+
             System.out.println("\n=== [" + username + "] Socket: MANAGE_INVENTORY ===");
             runManageInventory(c, userId);
 
@@ -95,7 +98,7 @@ public class Main {
             sendExit(c, username);
         }
     }
-    
+
     public static void runRegistration(Client c, String username, String password, String email, String region){
         try {
             JsonObject req = new JsonObject();
@@ -250,6 +253,21 @@ public class Main {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         System.out.println("REST PUT /items/" + itemId + " status: " + response.statusCode());
         System.out.println("REST PUT /items/" + itemId + " body: " + response.body());
+    }
+
+    public static void runPurchase(Client c, String username, String itemId){
+        try {
+            JsonObject purchaseReq = new JsonObject();
+            purchaseReq.addProperty("action", "PURCHASE");
+            purchaseReq.addProperty("itemId", itemId);
+
+            System.out.println("[User " + username + "]: Sending purchase request for item ID " + itemId + "...");
+            c.sendRequest(purchaseReq);
+            System.out.println("[User " + username + "]: Server replied: " + c.receiveResponse());
+
+        } catch (IOException e) {
+            System.out.println("Purchase Error: " + e);
+        }
     }
 
     public static void sendExit(Client c, String username) {

@@ -39,10 +39,10 @@ public class LoginHandler {
                 response.addProperty("code", "401");
                 response.addProperty("message", "Invalid email or password");
             }
+
         }
         catch(SQLException se){
             response.addProperty("status", "ERR");
-            response.addProperty("code", "777");
             response.addProperty("message", "SQL ERROR");
         }
         catch (Exception e){
