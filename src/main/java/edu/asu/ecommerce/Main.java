@@ -95,10 +95,12 @@ public class Main {
                 runRestDeleteItem(availableItemId, TEST_EMAIL);
                 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: delete item ===");
-
-                // Note: This is meant to fail y3ny to show deleting item that is sold is not an option
-                runSocketDeleteItem(sellerClient, TEST_USERNAME, purchasedItemId, TEST_EMAIL);
                 
+                // Note: This is meant to fail y3ny to show deleting item that is sold is not an option
+                try {
+                    runSocketDeleteItem(sellerClient, TEST_USERNAME, purchasedItemId, TEST_EMAIL);
+                } catch (RuntimeException ignored) { /* rejection already printed */ }
+                 
                 System.out.println("\n=== [" + TEST_USERNAME + "] Socket: VIEW_ACCOUNT ===");
                 runViewAccount(sellerClient, TEST_EMAIL);
               
